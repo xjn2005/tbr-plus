@@ -1,7 +1,8 @@
-title = 漢
+title = 简体中文
 readme = 可以在linux以及windows上使用的桌面阅读器，支持epub，haodoo。
 copy-content = 复制内容
 lookup-dictionary = 查阅字典
+add-annotation = 高亮与批注
 add-bookmark = 增加书签
 settings-render-label = 渲染方式
 render-han = 直排
@@ -28,6 +29,7 @@ invalid-style = 样式错误：{ $error }
 strip-empty-lines = 隐藏空行
 scroll-for-page = 鼠标滚动页
 tab-chapter = 章节
+tab-annotations = 批注
 tab-dictionary = 字典
 tab-find = 全文查找
 default-font-size = 缺省字体大小
@@ -58,6 +60,7 @@ find-all-book = 所有书籍
 find-all-book-tooltip = 在所有书籍中查找
 find-toggle-tooltip = 查找 / 停止
 found-chapter-title = 第{$index}章
+tab-library-search = 书库
 
 dictionary-no-definition = 无字典解释
 failed-load-reading = 加载文件信息失败：{ $error }

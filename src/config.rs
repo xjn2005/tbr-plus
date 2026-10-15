@@ -16,351 +16,354 @@ use crate::terminal::Listable;
 
 #[derive(Clone)]
 pub struct ReadingInfo {
-	row_id: i64,
-	pub filename: String,
-	pub inner_book: usize,
-	pub chapter: usize,
-	pub line: usize,
-	pub position: usize,
-	pub custom_color: bool,
-	pub custom_font: bool,
-	pub strip_empty_lines: bool,
-	pub custom_style: Option<String>,
-	pub font_size: u8,
+    row_id: i64,
+    pub filename: String,
+    pub inner_book: usize,
+    pub chapter: usize,
+    pub line: usize,
+    pub position: usize,
+    pub custom_color: bool,
+    pub custom_font: bool,
+    pub strip_empty_lines: bool,
+    pub custom_style: Option<String>,
+    pub font_size: u8,
 }
 
 impl ReadingInfo {
-	#[inline]
-	#[cfg(feature = "gui")]
-	pub fn fake(filename: &str) -> Self
-	{
-		ReadingInfo {
-			row_id: 0,
-			filename: String::from(filename),
-			inner_book: 0,
-			chapter: 0,
-			line: 0,
-			position: 0,
-			custom_color: false,
-			custom_font: false,
-			strip_empty_lines: false,
-			custom_style: None,
-			font_size: default_font_size(),
-		}
-	}
+    #[inline]
+    #[cfg(feature = "gui")]
+    pub fn fake(filename: &str) -> Self {
+        ReadingInfo {
+            row_id: 0,
+            filename: String::from(filename),
+            inner_book: 0,
+            chapter: 0,
+            line: 0,
+            position: 0,
+            custom_color: false,
+            custom_font: false,
+            strip_empty_lines: false,
+            custom_style: None,
+            font_size: default_font_size(),
+        }
+    }
 
-	#[inline]
-	pub fn load_inner_book(&self, inner_book: usize) -> BookLoadingInfo<'_>
-	{
-		BookLoadingInfo::ChangeInnerBook(
-			&self.filename,
-			inner_book,
-			self.row_id,
-			self.custom_style.clone(),
-			self.font_size)
-	}
+    #[inline]
+    pub fn load_inner_book(&self, inner_book: usize) -> BookLoadingInfo<'_> {
+        BookLoadingInfo::ChangeInnerBook(
+            &self.filename,
+            inner_book,
+            self.row_id,
+            self.custom_style.clone(),
+            self.font_size,
+        )
+    }
 
-	#[inline]
-	fn now() -> u64
-	{
-		SystemTime::now()
-			.duration_since(UNIX_EPOCH)
-			.unwrap()
-			.as_secs()
-	}
+    #[inline]
+    fn now() -> u64 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+    }
 }
 
 impl Listable for ReadingInfo {
-	fn title(&self) -> &str {
-		&self.filename
-	}
+    fn title(&self) -> &str {
+        &self.filename
+    }
 
-	fn id(&self) -> usize
-	{
-		let rowid = self.row_id;
-		if rowid < 0 {
-			0
-		} else {
-			rowid as usize
-		}
-	}
+    fn id(&self) -> usize {
+        let rowid = self.row_id;
+        if rowid < 0 {
+            0
+        } else {
+            rowid as usize
+        }
+    }
 }
 
 #[allow(unused)]
 pub enum BookLoadingInfo<'a> {
-	NewReading(&'a str, usize, usize, u8),
-	ChangeInnerBook(&'a str, usize, i64, Option<String>, u8),
-	History(ReadingInfo),
-	Reload(ReadingInfo),
+    NewReading(&'a str, usize, usize, u8),
+    ChangeInnerBook(&'a str, usize, i64, Option<String>, u8),
+    History(ReadingInfo),
+    Reload(ReadingInfo),
 }
 
 impl<'a> BookLoadingInfo<'a> {
-	#[inline]
-	pub fn filename(&self) -> &str
-	{
-		match self {
-			BookLoadingInfo::NewReading(filename, ..) => filename,
-			BookLoadingInfo::ChangeInnerBook(filename, ..) => filename,
-			BookLoadingInfo::History(reading) | BookLoadingInfo::Reload(reading) => &reading.filename,
-		}
-	}
+    #[inline]
+    pub fn filename(&self) -> &str {
+        match self {
+            BookLoadingInfo::NewReading(filename, ..) => filename,
+            BookLoadingInfo::ChangeInnerBook(filename, ..) => filename,
+            BookLoadingInfo::History(reading) | BookLoadingInfo::Reload(reading) => {
+                &reading.filename
+            }
+        }
+    }
 
-	#[inline]
-	pub fn get(self) -> ReadingInfo
-	{
-		match self {
-			BookLoadingInfo::NewReading(filename, inner_book, chapter, font_size) => ReadingInfo {
-				row_id: 0,
-				filename: filename.to_owned(),
-				inner_book,
-				chapter,
-				line: 0,
-				position: 0,
-				custom_color: false,
-				custom_font: false,
-				strip_empty_lines: false,
-				custom_style: None,
-				font_size,
-			},
-			BookLoadingInfo::ChangeInnerBook(filename, inner_book, row_id, custom_style, font_size) =>
-				ReadingInfo {
-					row_id,
-					filename: filename.to_owned(),
-					inner_book,
-					chapter: 0,
-					line: 0,
-					position: 0,
-					custom_color: false,
-					custom_font: false,
-					strip_empty_lines: false,
-					custom_style: custom_style.clone(),
-					font_size,
-				},
-			BookLoadingInfo::History(reading) | BookLoadingInfo::Reload(reading) => reading,
-		}
-	}
+    #[inline]
+    pub fn get(self) -> ReadingInfo {
+        match self {
+            BookLoadingInfo::NewReading(filename, inner_book, chapter, font_size) => ReadingInfo {
+                row_id: 0,
+                filename: filename.to_owned(),
+                inner_book,
+                chapter,
+                line: 0,
+                position: 0,
+                custom_color: false,
+                custom_font: false,
+                strip_empty_lines: false,
+                custom_style: None,
+                font_size,
+            },
+            BookLoadingInfo::ChangeInnerBook(
+                filename,
+                inner_book,
+                row_id,
+                custom_style,
+                font_size,
+            ) => ReadingInfo {
+                row_id,
+                filename: filename.to_owned(),
+                inner_book,
+                chapter: 0,
+                line: 0,
+                position: 0,
+                custom_color: false,
+                custom_font: false,
+                strip_empty_lines: false,
+                custom_style: custom_style.clone(),
+                font_size,
+            },
+            BookLoadingInfo::History(reading) | BookLoadingInfo::Reload(reading) => reading,
+        }
+    }
 
-	#[inline]
-	pub fn get_or_init<F>(self, f: F) -> ReadingInfo
-		where F: FnOnce(&mut ReadingInfo)
-	{
-		match self {
-			BookLoadingInfo::NewReading(filename, inner_book, chapter, font_size) => {
-				let mut reading = ReadingInfo {
-					row_id: 0,
-					filename: filename.to_owned(),
-					inner_book,
-					chapter,
-					line: 0,
-					position: 0,
-					custom_color: false,
-					custom_font: false,
-					strip_empty_lines: false,
-					custom_style: None,
-					font_size,
-				};
-				f(&mut reading);
-				reading
-			}
-			BookLoadingInfo::ChangeInnerBook(filename, inner_book, row_id, custom_style, font_size) => {
-				let mut reading = ReadingInfo {
-					row_id,
-					filename: filename.to_owned(),
-					inner_book,
-					chapter: 0,
-					line: 0,
-					position: 0,
-					custom_color: false,
-					custom_font: false,
-					strip_empty_lines: false,
-					custom_style: custom_style.clone(),
-					font_size,
-				};
-				f(&mut reading);
-				reading
-			}
-			BookLoadingInfo::History(reading) | BookLoadingInfo::Reload(reading) => reading
-		}
-	}
+    #[inline]
+    pub fn get_or_init<F>(self, f: F) -> ReadingInfo
+    where
+        F: FnOnce(&mut ReadingInfo),
+    {
+        match self {
+            BookLoadingInfo::NewReading(filename, inner_book, chapter, font_size) => {
+                let mut reading = ReadingInfo {
+                    row_id: 0,
+                    filename: filename.to_owned(),
+                    inner_book,
+                    chapter,
+                    line: 0,
+                    position: 0,
+                    custom_color: false,
+                    custom_font: false,
+                    strip_empty_lines: false,
+                    custom_style: None,
+                    font_size,
+                };
+                f(&mut reading);
+                reading
+            }
+            BookLoadingInfo::ChangeInnerBook(
+                filename,
+                inner_book,
+                row_id,
+                custom_style,
+                font_size,
+            ) => {
+                let mut reading = ReadingInfo {
+                    row_id,
+                    filename: filename.to_owned(),
+                    inner_book,
+                    chapter: 0,
+                    line: 0,
+                    position: 0,
+                    custom_color: false,
+                    custom_font: false,
+                    strip_empty_lines: false,
+                    custom_style: custom_style.clone(),
+                    font_size,
+                };
+                f(&mut reading);
+                reading
+            }
+            BookLoadingInfo::History(reading) | BookLoadingInfo::Reload(reading) => reading,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct PathConfig {
-	pub enabled: bool,
-	pub path: PathBuf,
+    pub enabled: bool,
+    pub path: PathBuf,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 #[cfg(feature = "gui")]
 #[serde(rename_all = "snake_case")]
 pub enum SidebarPosition {
-	Left,
-	Top,
+    Left,
+    Top,
 }
 
 #[cfg(feature = "gui")]
 impl Default for SidebarPosition {
-	#[inline]
-	fn default() -> Self
-	{
-		SidebarPosition::Left
-	}
+    #[inline]
+    fn default() -> Self {
+        SidebarPosition::Left
+    }
 }
 
 #[cfg(feature = "gui")]
 impl SidebarPosition {
-	#[inline]
-	pub fn paned_orientation(&self) -> Orientation
-	{
-		match self {
-			SidebarPosition::Left => Orientation::Horizontal,
-			SidebarPosition::Top => Orientation::Vertical,
-		}
-	}
-	#[inline]
-	pub fn i18n_key(&self) -> &'static str
-	{
-		match self {
-			SidebarPosition::Left => "sidebar-left",
-			SidebarPosition::Top => "sidebar-top",
-		}
-	}
+    #[inline]
+    pub fn paned_orientation(&self) -> Orientation {
+        match self {
+            SidebarPosition::Left => Orientation::Horizontal,
+            SidebarPosition::Top => Orientation::Vertical,
+        }
+    }
+    #[inline]
+    pub fn i18n_key(&self) -> &'static str {
+        match self {
+            SidebarPosition::Left => "sidebar-left",
+            SidebarPosition::Top => "sidebar-top",
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 #[cfg(feature = "gui")]
 pub struct GuiConfiguration {
-	#[serde(default)]
-	pub themes: Themes,
-	pub fonts: Vec<PathConfig>,
-	#[serde(default = "default_font_size")]
-	pub default_font_size: u8,
-	#[serde(default = "default_font_size")]
-	pub dict_font_size: u8,
-	pub sidebar_size: u32,
-	#[serde(default)]
-	pub sidebar_position: SidebarPosition,
-	#[serde(default = "default_locale")]
-	pub lang: String,
-	pub dictionaries: Vec<PathConfig>,
-	pub cache_dict: bool,
-	pub strip_empty_lines: bool,
-	pub ignore_font_weight: bool,
-	#[serde(default)]
-	pub scroll_for_page: bool,
-	#[serde(default)]
-	pub select_by_dictionary: bool,
+    #[serde(default)]
+    pub themes: Themes,
+    pub fonts: Vec<PathConfig>,
+    #[serde(default = "default_font_size")]
+    pub default_font_size: u8,
+    #[serde(default = "default_font_size")]
+    pub dict_font_size: u8,
+    pub sidebar_size: u32,
+    #[serde(default)]
+    pub sidebar_position: SidebarPosition,
+    #[serde(default = "default_locale")]
+    pub lang: String,
+    pub dictionaries: Vec<PathConfig>,
+    pub cache_dict: bool,
+    pub strip_empty_lines: bool,
+    pub ignore_font_weight: bool,
+    #[serde(default)]
+    pub scroll_for_page: bool,
+    #[serde(default)]
+    pub select_by_dictionary: bool,
 }
 
 #[cfg(feature = "gui")]
-impl Default for GuiConfiguration
-{
-	fn default() -> Self {
-		GuiConfiguration {
-			themes: Themes::default(),
-			fonts: vec![],
-			default_font_size: default_font_size(),
-			dict_font_size: default_font_size(),
-			sidebar_size: 300,
-			sidebar_position: Default::default(),
-			lang: default_locale(),
-			dictionaries: vec![],
-			cache_dict: false,
-			strip_empty_lines: false,
-			ignore_font_weight: false,
-			scroll_for_page: false,
-			select_by_dictionary: false,
-		}
-	}
+impl Default for GuiConfiguration {
+    fn default() -> Self {
+        GuiConfiguration {
+            themes: Themes::default(),
+            fonts: vec![],
+            default_font_size: default_font_size(),
+            dict_font_size: default_font_size(),
+            sidebar_size: 300,
+            sidebar_position: Default::default(),
+            lang: default_locale(),
+            dictionaries: vec![],
+            cache_dict: false,
+            strip_empty_lines: false,
+            ignore_font_weight: false,
+            scroll_for_page: false,
+            select_by_dictionary: false,
+        }
+    }
 }
 
 #[cfg(feature = "gui")]
 impl GuiConfiguration {
-	pub fn curr_colors(&self, dark: bool) -> &Colors
-	{
-		if dark {
-			&self.themes.dark
-		} else {
-			&self.themes.bright
-		}
-	}
+    pub fn curr_colors(&self, dark: bool) -> &Colors {
+        if dark {
+            &self.themes.dark
+        } else {
+            &self.themes.bright
+        }
+    }
 
-	pub fn curr_colors_mut(&mut self, dark: bool) -> &mut Colors
-	{
-		if dark {
-			&mut self.themes.dark
-		} else {
-			&mut self.themes.bright
-		}
-	}
+    pub fn curr_colors_mut(&mut self, dark: bool) -> &mut Colors {
+        if dark {
+            &mut self.themes.dark
+        } else {
+            &mut self.themes.bright
+        }
+    }
 }
 
 pub struct Configuration {
-	pub render_han: bool,
-	pub dark_theme: bool,
-	history: PathBuf,
-	#[cfg(feature = "gui")]
-	pub gui: GuiConfiguration,
+    pub render_han: bool,
+    pub dark_theme: bool,
+    history: PathBuf,
+    #[cfg(feature = "gui")]
+    pub gui: GuiConfiguration,
 
-	config_file: PathBuf,
-	history_db: Connection,
-	orig: RawConfig,
+    config_file: PathBuf,
+    history_db: Connection,
+    orig: RawConfig,
 }
 
 impl Configuration {
-	pub fn save(&self) -> Result<()>
-	{
-		let raw_config = RawConfig {
-			render_han: self.render_han,
-			dark_theme: self.dark_theme,
-			history: self.history.clone(),
-			#[cfg(feature = "gui")]
-			gui: self.gui.clone(),
-		};
-		if self.orig != raw_config {
-			let text = toml::to_string(&raw_config)?;
-			fs::write(&self.config_file, text)?;
-		}
-		Ok(())
-	}
+    pub fn save(&self) -> Result<()> {
+        let raw_config = RawConfig {
+            render_han: self.render_han,
+            dark_theme: self.dark_theme,
+            history: self.history.clone(),
+            #[cfg(feature = "gui")]
+            gui: self.gui.clone(),
+        };
+        if self.orig != raw_config {
+            let text = toml::to_string(&raw_config)?;
+            fs::write(&self.config_file, text)?;
+        }
+        Ok(())
+    }
 
-	#[cfg(feature = "gui")]
-	pub fn curr_theme(&self) -> &Colors
-	{
-		if self.dark_theme {
-			&self.gui.themes.dark
-		} else {
-			&self.gui.themes.bright
-		}
-	}
+    #[cfg(feature = "gui")]
+    pub fn curr_theme(&self) -> &Colors {
+        if self.dark_theme {
+            &self.gui.themes.dark
+        } else {
+            &self.gui.themes.bright
+        }
+    }
 
-	fn map(row: &Row) -> rusqlite::Result<ReadingInfo>
-	{
-		Ok(ReadingInfo {
-			row_id: row.get(0)?,
-			filename: row.get(1)?,
-			inner_book: row.get(2)?,
-			chapter: row.get(3)?,
-			line: row.get(4)?,
-			position: row.get(5)?,
-			custom_color: row.get(6)?,
-			custom_font: row.get(7)?,
-			strip_empty_lines: row.get(8)?,
-			custom_style: row.get(9)?,
-			font_size: row.get::<usize, Option<u8>>(10)?.
-				unwrap_or(default_font_size()),
-		})
-	}
+    fn map(row: &Row) -> rusqlite::Result<ReadingInfo> {
+        Ok(ReadingInfo {
+            row_id: row.get(0)?,
+            filename: row.get(1)?,
+            inner_book: row.get(2)?,
+            chapter: row.get(3)?,
+            line: row.get(4)?,
+            position: row.get(5)?,
+            custom_color: row.get(6)?,
+            custom_font: row.get(7)?,
+            strip_empty_lines: row.get(8)?,
+            custom_style: row.get(9)?,
+            font_size: row
+                .get::<usize, Option<u8>>(10)?
+                .unwrap_or(default_font_size()),
+        })
+    }
 
-	pub fn history(&self, current: Option<&String>, filter_pattern: Option<&String>)
-		-> Result<Vec<ReadingInfo>>
-	{
-		Ok(query(&self.history_db, 20, current, filter_pattern)?)
-	}
+    pub fn history(
+        &self,
+        current: Option<&String>,
+        filter_pattern: Option<&String>,
+    ) -> Result<Vec<ReadingInfo>> {
+        Ok(query(&self.history_db, 20, current, filter_pattern)?)
+    }
 
-	pub fn reading<'a>(&self, filename: &'a str) -> Result<BookLoadingInfo<'a>>
-	{
-		let mut stmt = self.history_db.prepare("
+    pub fn reading<'a>(&self, filename: &'a str) -> Result<BookLoadingInfo<'a>> {
+        let mut stmt = self.history_db.prepare(
+            "
 select row_id,
        filename,
        inner_book,
@@ -375,21 +378,36 @@ select row_id,
        ts
 from history
 where filename = ?
-")?;
-		let mut iter = stmt.query_map([filename], Configuration::map)?;
-		if let Some(info) = iter.next() {
-			Ok(BookLoadingInfo::History(info?))
-		} else {
-			#[cfg(feature = "gui")]
-			{ Ok(BookLoadingInfo::NewReading(filename, 0, 0, self.gui.default_font_size)) }
-			#[cfg(not(feature = "gui"))]
-			{ Ok(BookLoadingInfo::NewReading(filename, 0, 0, default_font_size())) }
-		}
-	}
+",
+        )?;
+        let mut iter = stmt.query_map([filename], Configuration::map)?;
+        if let Some(info) = iter.next() {
+            Ok(BookLoadingInfo::History(info?))
+        } else {
+            #[cfg(feature = "gui")]
+            {
+                Ok(BookLoadingInfo::NewReading(
+                    filename,
+                    0,
+                    0,
+                    self.gui.default_font_size,
+                ))
+            }
+            #[cfg(not(feature = "gui"))]
+            {
+                Ok(BookLoadingInfo::NewReading(
+                    filename,
+                    0,
+                    0,
+                    default_font_size(),
+                ))
+            }
+        }
+    }
 
-	pub fn reading_by_id(&self, row_id: i64) -> Result<ReadingInfo>
-	{
-		let mut stmt = self.history_db.prepare("
+    pub fn reading_by_id(&self, row_id: i64) -> Result<ReadingInfo> {
+        let mut stmt = self.history_db.prepare(
+            "
 select row_id,
        filename,
        inner_book,
@@ -404,31 +422,44 @@ select row_id,
        ts
 from history
 where row_id = ?
-")?;
-		let mut iter = stmt.query_map([row_id], Configuration::map)?;
-		if let Some(info) = iter.next() {
-			Ok(info?)
-		} else {
-			panic!("Reading history not exists");
-		}
-	}
+",
+        )?;
+        let mut iter = stmt.query_map([row_id], Configuration::map)?;
+        if let Some(info) = iter.next() {
+            Ok(info?)
+        } else {
+            panic!("Reading history not exists");
+        }
+    }
 
-	pub fn save_reading(&self, reading: &mut ReadingInfo) -> Result<()>
-	{
-		let ts = ReadingInfo::now();
-		if reading.row_id == 0 {
-			self.history_db.execute("
+    pub fn save_reading(&self, reading: &mut ReadingInfo) -> Result<()> {
+        let ts = ReadingInfo::now();
+        if reading.row_id == 0 {
+            self.history_db.execute(
+                "
 insert into history (filename, inner_book, chapter, line, position,
                      custom_color, custom_font, strip_empty_lines,
                      custom_style, font_size, ts)
 values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-", (&reading.filename, reading.inner_book, reading.chapter, reading.line,
-				reading.position, reading.custom_color, reading.custom_font,
-				reading.strip_empty_lines, &reading.custom_style,
-				reading.font_size, ts))?;
-			reading.row_id = self.history_db.last_insert_rowid();
-		} else {
-			self.history_db.execute("
+",
+                (
+                    &reading.filename,
+                    reading.inner_book,
+                    reading.chapter,
+                    reading.line,
+                    reading.position,
+                    reading.custom_color,
+                    reading.custom_font,
+                    reading.strip_empty_lines,
+                    &reading.custom_style,
+                    reading.font_size,
+                    ts,
+                ),
+            )?;
+            reading.row_id = self.history_db.last_insert_rowid();
+        } else {
+            self.history_db.execute(
+                "
 update history
 set filename          = ?,
     inner_book        = ?,
@@ -442,132 +473,170 @@ set filename          = ?,
     font_size         = ?,
     ts                = ?
 where row_id = ?
-", (&reading.filename, reading.inner_book, reading.chapter, reading.line,
-				reading.position, reading.custom_color, reading.custom_font,
-				reading.strip_empty_lines, &reading.custom_style,
-				reading.font_size, ts, reading.row_id))?;
-		}
-		Ok(())
-	}
+",
+                (
+                    &reading.filename,
+                    reading.inner_book,
+                    reading.chapter,
+                    reading.line,
+                    reading.position,
+                    reading.custom_color,
+                    reading.custom_font,
+                    reading.strip_empty_lines,
+                    &reading.custom_style,
+                    reading.font_size,
+                    ts,
+                    reading.row_id,
+                ),
+            )?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct Themes {
-	bright: Colors,
-	dark: Colors,
+    bright: Colors,
+    dark: Colors,
 }
 
 impl Default for Themes {
-	fn default() -> Self
-	{
-		Self {
-			dark: Colors::DEFAULT_DARK,
-			bright: Colors::DEFAULT_BRIGHT,
-		}
-	}
+    fn default() -> Self {
+        Self {
+            dark: Colors::DEFAULT_DARK,
+            bright: Colors::DEFAULT_BRIGHT,
+        }
+    }
 }
 
-pub(super) fn load_config(filename: Option<String>, config_file: PathBuf, config_dir: &PathBuf,
-	cache_dir: &PathBuf) -> Result<(Option<String>, Configuration)>
-{
-	let (current, configuration) =
-		if config_file.as_path().is_file() {
-			let string = fs::read_to_string(&config_file)?;
-			let raw_config: RawConfig = toml::from_str(&string)?;
-			let mut current = if let Some(filename) = &filename {
-				file_path(filename)
-			} else {
-				None
-			};
-			let history_db = load_history_db(&raw_config.history)?;
-			if current.is_none() {
-				if let Some(latest_reading) = query(&history_db, 1, None, None)?.pop() {
-					current = Some(latest_reading.filename);
-				}
-			}
-			let orig = raw_config.clone();
-			let configuration = Configuration {
-				render_han: raw_config.render_han,
-				dark_theme: raw_config.dark_theme,
-				history: raw_config.history,
-				#[cfg(feature = "gui")]
-				gui: raw_config.gui,
-				config_file,
-				history_db,
-				orig,
-			};
-			(current, configuration)
-		} else {
-			fs::create_dir_all(config_dir)?;
-			fs::create_dir_all(cache_dir)?;
-			let current = filename
-				.map_or(None, |filename| file_path(&filename));
-			let history = config_dir.join("history.sqlite");
-			let history_db = load_history_db(&history)?;
-			let orig = RawConfig {
-				render_han: false,
-				dark_theme: false,
-				history: history.clone(),
-				#[cfg(feature = "gui")]
-				gui: Default::default(),
-			};
-			let text = toml::to_string(&orig)?;
-			fs::write(&config_file, text)?;
-			(current, Configuration {
-				render_han: false,
-				dark_theme: false,
-				history,
-				#[cfg(feature = "gui")]
-				gui: Default::default(),
+impl Themes {
+    /// Preserve intentional colour customisation while updating configurations
+    /// that still contain the exact palettes shipped by the original reader.
+    fn migrate_legacy_defaults(&mut self) {
+        if self.dark == Colors::LEGACY_DEFAULT_DARK {
+            self.dark = Colors::DEFAULT_DARK;
+        }
+        if self.bright == Colors::LEGACY_DEFAULT_BRIGHT {
+            self.bright = Colors::DEFAULT_BRIGHT;
+        }
+    }
+}
 
-				config_file,
-				history_db,
-				orig,
-			})
-		};
-	return Ok((current, configuration));
+pub(super) fn load_config(
+    filename: Option<String>,
+    config_file: PathBuf,
+    config_dir: &PathBuf,
+    cache_dir: &PathBuf,
+) -> Result<(Option<String>, Configuration)> {
+    let (current, configuration) = if config_file.as_path().is_file() {
+        let string = fs::read_to_string(&config_file)?;
+        let raw_config: RawConfig = toml::from_str(&string)?;
+        let mut current = if let Some(filename) = &filename {
+            file_path(filename)
+        } else {
+            None
+        };
+        let history_db = load_history_db(&raw_config.history)?;
+        if current.is_none() {
+            if let Some(latest_reading) = query(&history_db, 1, None, None)?.pop() {
+                current = Some(latest_reading.filename);
+            }
+        }
+        let orig = raw_config.clone();
+        #[cfg(feature = "gui")]
+        let mut gui = raw_config.gui;
+        #[cfg(feature = "gui")]
+        {
+            gui.lang = i18n::DEFAULT_LOCALE.to_string();
+            gui.themes.migrate_legacy_defaults();
+        }
+        let configuration = Configuration {
+            render_han: raw_config.render_han,
+            dark_theme: raw_config.dark_theme,
+            history: raw_config.history,
+            #[cfg(feature = "gui")]
+            gui,
+            config_file,
+            history_db,
+            orig,
+        };
+        (current, configuration)
+    } else {
+        fs::create_dir_all(config_dir)?;
+        fs::create_dir_all(cache_dir)?;
+        let current = filename.map_or(None, |filename| file_path(&filename));
+        let history = config_dir.join("history.sqlite");
+        let history_db = load_history_db(&history)?;
+        let orig = RawConfig {
+            render_han: false,
+            dark_theme: false,
+            history: history.clone(),
+            #[cfg(feature = "gui")]
+            gui: Default::default(),
+        };
+        let text = toml::to_string(&orig)?;
+        fs::write(&config_file, text)?;
+        (
+            current,
+            Configuration {
+                render_han: false,
+                dark_theme: false,
+                history,
+                #[cfg(feature = "gui")]
+                gui: Default::default(),
+
+                config_file,
+                history_db,
+                orig,
+            },
+        )
+    };
+    return Ok((current, configuration));
 }
 
 fn file_path(filename: &str) -> Option<String> {
-	let filepath = PathBuf::from(filename);
-	if !filepath.exists() {
-		return None;
-	}
-	if let Ok(filepath) = fs::canonicalize(filepath) {
-		let filename = filepath.as_os_str().to_str().unwrap().to_string();
-		Some(filename)
-	} else {
-		None
-	}
+    let filepath = PathBuf::from(filename);
+    if !filepath.exists() {
+        return None;
+    }
+    if let Ok(filepath) = fs::canonicalize(filepath) {
+        let filename = filepath.as_os_str().to_str().unwrap().to_string();
+        Some(filename)
+    } else {
+        None
+    }
 }
 
 #[inline]
 #[cfg(feature = "i18n")]
-fn default_locale() -> String
-{
-	use sys_locale::get_locale;
-	get_locale().unwrap_or_else(|| String::from(i18n::DEFAULT_LOCALE))
+fn default_locale() -> String {
+    String::from(i18n::DEFAULT_LOCALE)
 }
 
 #[inline]
-fn default_font_size() -> u8
-{
-	20
+fn default_font_size() -> u8 {
+    20
 }
 
 const CURRENT_DB_VERSION: u16 = 2;
 
 #[inline]
-fn load_history_db(path: &PathBuf) -> Result<Connection>
-{
-	let connection = if !path.exists() {
-		// init db
-		let conn = Connection::open(path)?;
-		conn.execute("
+fn load_history_db(path: &PathBuf) -> Result<Connection> {
+    let connection = if !path.exists() {
+        // init db
+        let conn = Connection::open(path)?;
+        conn.execute(
+            "
 create table info ( version integer )
-			", ())?;
-		conn.execute("insert into info (version) values (?)", [CURRENT_DB_VERSION])?;
-		conn.execute("
+			",
+            (),
+        )?;
+        conn.execute(
+            "insert into info (version) values (?)",
+            [CURRENT_DB_VERSION],
+        )?;
+        conn.execute(
+            "
 create table history
 (
     row_id            integer primary key,
@@ -583,42 +652,43 @@ create table history
     font_size         unsigned big int,
     ts                unsigned big int,
     unique (filename)
-)", ())?;
-		conn
-	} else {
-		let connection = Connection::open(path)?;
-		upgrade_db(&connection)?;
-		connection
-	};
-	Ok(connection)
+)",
+            (),
+        )?;
+        conn
+    } else {
+        let connection = Connection::open(path)?;
+        upgrade_db(&connection)?;
+        connection
+    };
+    Ok(connection)
 }
 
 #[inline]
-fn upgrade_db(connection: &Connection) -> Result<()>
-{
-	let mut stmt = connection.prepare("select version from info")?;
-	let mut rows = stmt.query([])?;
-	let row = rows.next()?;
-	let version: u64 = if let Some(row) = row {
-		row.get(0)?
-	} else {
-		0
-	};
-	if version == 0 {
-		connection.execute("alter table history add custom_style varchar", [])?;
-		connection.execute("insert into info (version) values (1)", [])?;
-	}
-	if version < 2 {
-		connection.execute("alter table history add font_size unsigned big int", [])?;
-		connection.execute("update info set version = 2", [])?;
-	}
-	Ok(())
+fn upgrade_db(connection: &Connection) -> Result<()> {
+    let mut stmt = connection.prepare("select version from info")?;
+    let mut rows = stmt.query([])?;
+    let row = rows.next()?;
+    let version: u64 = if let Some(row) = row { row.get(0)? } else { 0 };
+    if version == 0 {
+        connection.execute("alter table history add custom_style varchar", [])?;
+        connection.execute("insert into info (version) values (1)", [])?;
+    }
+    if version < 2 {
+        connection.execute("alter table history add font_size unsigned big int", [])?;
+        connection.execute("update info set version = 2", [])?;
+    }
+    Ok(())
 }
 
-fn query(conn: &Connection, limit: usize, exclude: Option<&String>,
-	filter_pattern: Option<&String>) -> Result<Vec<ReadingInfo>>
-{
-	let mut stmt = conn.prepare("
+fn query(
+    conn: &Connection,
+    limit: usize,
+    exclude: Option<&String>,
+    filter_pattern: Option<&String>,
+) -> Result<Vec<ReadingInfo>> {
+    let mut stmt = conn.prepare(
+        "
 select row_id,
        filename,
        inner_book,
@@ -633,60 +703,60 @@ select row_id,
        ts
 from history
 order by ts desc
-")?;
-	let iter = stmt.query_map([], Configuration::map)?;
-	let mut list = vec![];
-	for info in iter {
-		let info = info?;
-		let path = PathBuf::from_str(&info.filename)?;
-		if !path.exists() {
-			continue;
-		}
-		let filename = &info.filename;
-		if let Some(exclude) = exclude {
-			if exclude == filename {
-				continue;
-			}
-		}
-		if let Some(pattern) = filter_pattern {
-			if match_filename(&filename, pattern).is_none() {
-				continue;
-			}
-		}
-		list.push(info);
-		if list.len() >= limit {
-			break;
-		}
-	}
-	Ok(list)
+",
+    )?;
+    let iter = stmt.query_map([], Configuration::map)?;
+    let mut list = vec![];
+    for info in iter {
+        let info = info?;
+        let path = PathBuf::from_str(&info.filename)?;
+        if !path.exists() {
+            continue;
+        }
+        let filename = &info.filename;
+        if let Some(exclude) = exclude {
+            if exclude == filename {
+                continue;
+            }
+        }
+        if let Some(pattern) = filter_pattern {
+            if match_filename(&filename, pattern).is_none() {
+                continue;
+            }
+        }
+        list.push(info);
+        if list.len() >= limit {
+            break;
+        }
+    }
+    Ok(list)
 }
 
-pub fn match_filename(filename: &str, pattern: &str) -> Option<Vec<usize>>
-{
-	let mut vec = vec![];
-	let mut name_iter = filename.chars().into_iter();
-	let mut fi = 0;
-	for pc in pattern.chars() {
-		let pc = pc.to_ascii_lowercase();
-		loop {
-			let fc = name_iter.next()?.to_ascii_lowercase();
-			if fc == pc {
-				vec.push(fi);
-				fi += 1;
-				break;
-			}
-			fi += 1;
-		}
-	}
-	Some(vec)
+pub fn match_filename(filename: &str, pattern: &str) -> Option<Vec<usize>> {
+    let mut vec = vec![];
+    let mut name_iter = filename.chars().into_iter();
+    let mut fi = 0;
+    for pc in pattern.chars() {
+        let pc = pc.to_ascii_lowercase();
+        loop {
+            let fc = name_iter.next()?.to_ascii_lowercase();
+            if fc == pc {
+                vec.push(fi);
+                fi += 1;
+                break;
+            }
+            fi += 1;
+        }
+    }
+    Some(vec)
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct RawConfig {
-	pub render_han: bool,
-	pub dark_theme: bool,
-	history: PathBuf,
-	#[cfg(feature = "gui")]
-	#[serde(default)]
-	pub gui: GuiConfiguration,
+    pub render_han: bool,
+    pub dark_theme: bool,
+    history: PathBuf,
+    #[cfg(feature = "gui")]
+    #[serde(default)]
+    pub gui: GuiConfiguration,
 }

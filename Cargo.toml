@@ -1,10 +1,8 @@
 [package]
-name = "tbr"
-description = "Terminal and GUI ebook reader"
+name = "tbr-plus"
+description = "A local-first reader for books worth returning to"
 authors = ["zang.loo"]
 version = "2.4.3"
-homepage = "https://github.com/zangloo/tbr"
-repository = "https://github.com/zangloo/tbr.git"
 keywords = ["terminal", "gui", "ebook", "epub"]
 license = "GPL-2.0-only"
 readme = "README.md"
@@ -56,6 +54,7 @@ zip = "4.3"
 lexical-sort = "0.3"
 elsa = "1.8"
 bitflags = "2.5"
+sha2 = "0.10"
 
 # scraper need v0.11
 markup5ever = "0.11"

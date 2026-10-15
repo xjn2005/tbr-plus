@@ -1,9 +1,14 @@
-# tbr(A terminal and gui ebook reader)
+# tbr++
 
 ## About
 
-`tbr` is a simple e-book reader in terminal and gtk4(>4.10).By now, support txt, html, haodoo and epub.
-it can also render text as chinese tradition style(top to bottom and right to left).
+`tbr++` is a local-first reader for books worth returning to. It keeps the terminal reader lightweight and puts long-lived reading work in the GTK desktop app.
+
+The GUI supports EPUB, TXT, HTML, Haodoo, and Markdown, including traditional Chinese vertical layout. Highlights, notes, tags, favourites, and pending excerpts stay in a local SQLite database; no account, cloud sync, mobile client, PDF renderer, or AI summary is involved.
+
+Select text to create a coloured highlight, then add a note and tags. The annotation sidebar can return to the source, edit or organise excerpts, and export a book's annotations as a portable Markdown file. The Library sidebar searches indexed text, highlights, notes, and tags across the books you have opened.
+
+Useful GUI shortcuts: `Ctrl+Shift+A` opens annotations; `Ctrl+Shift+H` creates a highlight from the current selection.
 
 ## Build
 
@@ -15,7 +20,7 @@ it can also render text as chinese tradition style(top to bottom and right to le
 
 ## Configuration
 
-Config files store in .config/tbr/tbr.toml. Themes configuration files store in ~/.config/ter/themes/. Files will auto
+Config files store in .config/tbr-plus/tbr.toml. Themes configuration files store in ~/.config/ter/themes/. Files will auto
 generated if not exists.
 
 ## Key binding for terminal

@@ -1,0 +1,3 @@
+本地阅读值得回到原文。
+Annotations must survive a renamed book.
+中文选区不应按 UTF-8 字节截断。

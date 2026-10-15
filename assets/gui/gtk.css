@@ -47,3 +47,36 @@ headerbar box {
 	padding-left: 0;
 	padding-right: 0;
 }
+
+.annotation-card {
+	margin: 4px;
+	border-radius: 8px;
+}
+
+.annotation-quote {
+	font-weight: 600;
+	line-height: 1.35;
+}
+
+.annotation-note {
+	padding: 7px 9px;
+	border-radius: 6px;
+}
+
+.annotation-color-yellow,
+.annotation-color-blue,
+.annotation-color-green,
+.annotation-color-red {
+	min-width: 54px;
+	border-radius: 999px;
+}
+
+.annotation-color-yellow { background-color: alpha(#d9b26f, 0.24); }
+.annotation-color-blue { background-color: alpha(#70a5d8, 0.24); }
+.annotation-color-green { background-color: alpha(#7fad8b, 0.24); }
+.annotation-color-red { background-color: alpha(#c9877f, 0.24); }
+
+.library-search-card {
+	margin: 4px;
+	border-radius: 8px;
+}
