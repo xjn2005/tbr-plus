@@ -1,68 +1,45 @@
 # tbr++
 
-## About
+> 为值得重访的书而读：一个本地优先的中文阅读、摘录与检索工具。
 
-`tbr++` is a local-first reader for books worth returning to. It keeps the terminal reader lightweight and puts long-lived reading work in the GTK desktop app.
+[![CI](https://github.com/xjn2005/tbr-plus/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/xjn2005/tbr-plus/actions/workflows/ci.yml)
+[![Rust 2021](https://img.shields.io/badge/Rust-2021-ea5b0c?style=flat&logo=rust&logoColor=white)](https://www.rust-lang.org/)
+[![许可证：GPL-2.0-only](https://img.shields.io/badge/许可证-GPL--2.0--only-5e5e5e?style=flat)](LICENSE)
 
-The GUI supports EPUB, TXT, HTML, Haodoo, and Markdown, including traditional Chinese vertical layout. Highlights, notes, tags, favourites, and pending excerpts stay in a local SQLite database; no account, cloud sync, mobile client, PDF renderer, or AI summary is involved.
+## 适合你，如果……
 
-Select text to create a coloured highlight, then add a note and tags. The annotation sidebar can return to the source, edit or organise excerpts, and export a book's annotations as a portable Markdown file. The Library sidebar searches indexed text, highlights, notes, and tags across the books you have opened.
+- 你想读 EPUB、TXT、HTML、Haodoo 或 Markdown，并重视中文横排与竖排体验。
+- 你希望高亮、批注、标签和阅读记录只留在自己的电脑上。
+- 你想在读完之后，按正文、批注或标签重新找到一本书里的段落。
 
-Useful GUI shortcuts: `Ctrl+Shift+A` opens annotations; `Ctrl+Shift+H` creates a highlight from the current selection.
+## 当前支持
 
-## Build
+- GTK 桌面阅读器与轻量终端阅读器。
+- EPUB、TXT、HTML、Haodoo、Markdown。
+- 高亮、批注、标签、收藏、待整理、Markdown 摘录导出与书库检索。
 
-    cargo build --release
+暂不支持 PDF、账号、云同步、移动端和 AI 总结。
 
-## Build without GUI support
+## 快速开始
 
-    cargo build --release --no-default-features
+目前从源码运行。安装 Rust 与 GTK 4 开发环境后：
 
-## Configuration
+```powershell
+git clone https://github.com/xjn2005/tbr-plus.git
+cd tbr-plus
+cargo run -- path\to\book.epub
+```
 
-Config files store in .config/tbr-plus/tbr.toml. Themes configuration files store in ~/.config/ter/themes/. Files will auto
-generated if not exists.
+## 怎么使用
 
-## Key binding for terminal
+1. 在桌面阅读器中选中一段文字，创建高亮并写下批注或标签。
+2. 在“批注”页回看、收藏或标记待整理的摘录。
+3. 导出 Markdown，或在“书库”中跨书检索正文、批注与标签。
 
-| Function                  | Key mappings                  |
-|---------------------------|-------------------------------|
-| Next page                 | space,page down               |
-| Previous page             | page up                       |
-| Search                    | '/'                           |
-| Search Next               | 'n'                           |
-| Search backward           | 'N'                           |
-| Inner book dialog         | 'b'                           |
-| History dialog            | 'h'                           |
-| Select chapter            | 'c'                           |
-| Select theme              | 't'                           |
-| Show version              | 'v'                           |
-| Next line                 | down                          |
-| Previous line             | up                            |
-| Back prev position        | left                          |
-| Forward to next position  | right                         |
-| Goto start of chapter     | home                          |
-| Goto end of chapter       | end                           |
-| Goto line                 | 'g'                           |
-| Navigate to next link     | tab                           |
-| Navigate to prev link     | shift + tab                   |
-| Open link                 | left click/enter on highlight |
-| Next chapter              | ^D                            |
-| Previous chapter          | ^B                            |
-| Switch view mode han<=>xi | ^X                            |
-| Quit                      | 'q'                           |
+## 本地优先
 
-## License
+批注与书库索引保存在本机 SQLite 数据库中。tbr++ 不需要账号，不上传阅读内容，也不提供云同步。
 
-GPLv2
+## 许可证
 
-## Screenshots
-
-### In terminal:
-![Screenshot_2022-05-25_21-05-44](https://user-images.githubusercontent.com/10681694/170268007-6959b9d4-34d8-49fa-9af4-a4e904f6223a.png)
-
-### In Gui(Xi)
-![Screenshot_2024-07-06_11-13-08](https://github.com/zangloo/tbr/assets/10681694/04727e86-f7fe-446e-b727-bdaaf789d373)
-
-### In Gui(Han)
-![Screenshot_2024-07-06_11-14-24](https://github.com/zangloo/tbr/assets/10681694/ddd26bdd-aec1-445f-b0a6-c2b2ac948604)
+[GPL-2.0-only](LICENSE)
