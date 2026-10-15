@@ -276,39 +276,47 @@ pub fn load_entries(chapter_list: &ChapterList) {
             if index == controller.reading.inner_book {
                 current_book_idx = Some(entries.len());
                 entries.push(ChapterListEntry::new(bookname, true, index, 0, true));
-                if let Some(toc) = controller.book.toc_iterator() {
-                    for info in toc {
-                        let reading = info.index == current_toc;
-                        if reading {
-                            selected_index = Some(entries.len());
+                match controller.book.toc_iterator() {
+                    Some(toc) => {
+                        for info in toc {
+                            let reading = info.index == current_toc;
+                            if reading {
+                                selected_index = Some(entries.len());
+                            }
+                            entries.push(ChapterListEntry::new(
+                                info.title, false, info.index, info.level, reading,
+                            ));
                         }
-                        entries.push(ChapterListEntry::new(
-                            info.title, false, info.index, info.level, reading,
-                        ));
                     }
-                } else {
-                    selected_index = Some(entries.len() - 1);
-                    current_book_collapsable = false;
+                    _ => {
+                        selected_index = Some(entries.len() - 1);
+                        current_book_collapsable = false;
+                    }
                 }
             } else {
                 entries.push(ChapterListEntry::new(bookname, true, index, 0, false));
             }
         }
-    } else if let Some(toc) = controller.book.toc_iterator() {
-        for info in toc {
-            let reading = info.index == current_toc;
-            if reading {
-                selected_index = Some(entries.len());
+    } else {
+        match controller.book.toc_iterator() {
+            Some(toc) => {
+                for info in toc {
+                    let reading = info.index == current_toc;
+                    if reading {
+                        selected_index = Some(entries.len());
+                    }
+                    entries.push(ChapterListEntry::new(
+                        info.title,
+                        false,
+                        info.index,
+                        info.level - 1,
+                        reading,
+                    ));
+                }
+                toc_level = 0;
             }
-            entries.push(ChapterListEntry::new(
-                info.title,
-                false,
-                info.index,
-                info.level - 1,
-                reading,
-            ));
+            _ => {}
         }
-        toc_level = 0;
     }
     let mut rows = vec![];
     for entry in entries.iter() {

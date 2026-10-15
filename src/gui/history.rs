@@ -82,10 +82,9 @@ impl HistoryList {
             fn next_row(list: &ListBox) -> Option<ListBoxRow> {
                 let selected = list.selected_row()?;
                 let idx = selected.index() + 1;
-                if let Some(row) = list.row_at_index(idx) {
-                    Some(row)
-                } else {
-                    list.row_at_index(0)
+                match list.row_at_index(idx) {
+                    Some(row) => Some(row),
+                    _ => list.row_at_index(0),
                 }
             }
             #[inline]

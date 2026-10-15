@@ -30,8 +30,6 @@ pub struct SearchHit {
     pub line: usize,
     pub body: String,
     pub note: Option<String>,
-    pub tags: Vec<String>,
-    pub score: f64,
 }
 
 pub struct LibraryIndex {
@@ -200,12 +198,6 @@ limit ?
                 line: row.get::<_, i64>(6)? as usize,
                 body: row.get(7)?,
                 note: row.get(8)?,
-                tags: row
-                    .get::<_, String>(9)?
-                    .split_whitespace()
-                    .map(ToOwned::to_owned)
-                    .collect(),
-                score: row.get(10)?,
             })
         })?;
         Ok(hits.collect::<rusqlite::Result<Vec<_>>>()?)

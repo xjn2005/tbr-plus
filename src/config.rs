@@ -381,26 +381,28 @@ where filename = ?
 ",
         )?;
         let mut iter = stmt.query_map([filename], Configuration::map)?;
-        if let Some(info) = iter.next() {
-            Ok(BookLoadingInfo::History(info?))
-        } else {
-            #[cfg(feature = "gui")]
-            {
-                Ok(BookLoadingInfo::NewReading(
-                    filename,
-                    0,
-                    0,
-                    self.gui.default_font_size,
-                ))
-            }
-            #[cfg(not(feature = "gui"))]
-            {
-                Ok(BookLoadingInfo::NewReading(
-                    filename,
-                    0,
-                    0,
-                    default_font_size(),
-                ))
+        let next = iter.next();
+        match next {
+            Some(info) => Ok(BookLoadingInfo::History(info?)),
+            _ => {
+                #[cfg(feature = "gui")]
+                {
+                    Ok(BookLoadingInfo::NewReading(
+                        filename,
+                        0,
+                        0,
+                        self.gui.default_font_size,
+                    ))
+                }
+                #[cfg(not(feature = "gui"))]
+                {
+                    Ok(BookLoadingInfo::NewReading(
+                        filename,
+                        0,
+                        0,
+                        default_font_size(),
+                    ))
+                }
             }
         }
     }
@@ -425,10 +427,12 @@ where row_id = ?
 ",
         )?;
         let mut iter = stmt.query_map([row_id], Configuration::map)?;
-        if let Some(info) = iter.next() {
-            Ok(info?)
-        } else {
-            panic!("Reading history not exists");
+        let next = iter.next();
+        match next {
+            Some(info) => Ok(info?),
+            _ => {
+                panic!("Reading history not exists");
+            }
         }
     }
 

@@ -106,11 +106,14 @@ fn main() -> Result<()> {
         load_config(filename, config_file, &config_dir, &cache_dir)?;
     #[cfg(feature = "gui")]
     if !cli.terminal {
-        if let Some((curr, c)) = gui::start(current, configuration)? {
-            current = curr;
-            configuration = c;
-        } else {
-            return Ok(());
+        match gui::start(current, configuration)? {
+            Some((curr, c)) => {
+                current = curr;
+                configuration = c;
+            }
+            _ => {
+                return Ok(());
+            }
         }
     }
     terminal::start(current, configuration, config_dir)?;

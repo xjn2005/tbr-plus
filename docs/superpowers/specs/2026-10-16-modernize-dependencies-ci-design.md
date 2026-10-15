@@ -21,7 +21,7 @@ tbr++ 是一个 Rust/GTK4 的本地优先阅读器。目前它采用 Rust 2021�
 ## 技术基线
 
 - 新增 `rust-toolchain.toml`，固定 CI 与本地均使用 stable 工具链；包的
-  `rust-version` 设为 `1.85`，这是 Rust 2024 的最低版本。
+  `rust-version` 设为 `1.92`，以满足 GTK Rust 0.11 系列的最低版本要求。
 - 将 `edition` 从 `2021` 迁移为 `2024`，使用 `cargo fix --edition` 的结果作为
   机械迁移起点，再人工审查语义变化。
 - 将 `gtk4` 从 0.8 升至 0.11 系列，并将 `glib`、`gio`、`pangocairo` 等 GTK Rust

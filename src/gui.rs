@@ -1096,21 +1096,26 @@ fn switch_stack(tab_name: &str, gc: &GuiContext, toggle: bool) -> bool {
         stack.set_visible_child_name(tab_name);
         gc.toggle_sidebar();
         true
-    } else if let Some(current_tab_name) = stack.visible_child_name() {
-        if current_tab_name == tab_name {
-            if toggle {
-                gc.toggle_sidebar();
-                false
-            } else {
+    } else {
+        match stack.visible_child_name() {
+            Some(current_tab_name) => {
+                if current_tab_name == tab_name {
+                    if toggle {
+                        gc.toggle_sidebar();
+                        false
+                    } else {
+                        true
+                    }
+                } else {
+                    stack.set_visible_child_name(tab_name);
+                    true
+                }
+            }
+            _ => {
+                stack.set_visible_child_name(tab_name);
                 true
             }
-        } else {
-            stack.set_visible_child_name(tab_name);
-            true
         }
-    } else {
-        stack.set_visible_child_name(tab_name);
-        true
     }
 }
 
@@ -1254,7 +1259,7 @@ fn setup_window(
                 }
                 (Key::F11, MODIFIER_NONE) => {
                     let win = &gc.window;
-                    win.set_fullscreened(!win.is_fullscreened());
+                    win.set_fullscreened(!win.is_fullscreen());
                     Propagation::Stop
                 }
                 _ => {
@@ -2041,7 +2046,9 @@ impl GuiContext {
             let (key, modifier) = ignore_cap(key, modifier);
             match (key, modifier) {
                 (Key::i, MODIFIER_NONE) | (Key::q, MODIFIER_NONE) => {
-                    ev.widget().set_visible(false);
+                    if let Some(widget) = ev.widget() {
+                        widget.set_visible(false);
+                    }
                     Propagation::Stop
                 }
                 (Key::c, ModifierType::CONTROL_MASK) => {
@@ -2198,10 +2205,13 @@ impl GuiContext {
         match result {
             Ok(()) => {
                 self.ctrl_mut().clear_highlight(&mut self.ctx_mut());
-                if let Err(err) = self.refresh_annotations() {
-                    self.error(&err.to_string());
-                } else {
-                    self.message("已保存批注。");
+                match self.refresh_annotations() {
+                    Err(err) => {
+                        self.error(&err.to_string());
+                    }
+                    _ => {
+                        self.message("已保存批注。");
+                    }
                 }
             }
             Err(err) => self.error(&err.to_string()),
@@ -2396,10 +2406,13 @@ impl GuiContext {
                 Ok(Ok(count)) => {
                     gc.indexing_sources.borrow_mut().remove(&source);
                     gc.indexed_sources.borrow_mut().insert(source.clone());
-                    if let Err(err) = gc.refresh_annotations() {
-                        gc.error(&err.to_string());
-                    } else {
-                        gc.message(&format!("书库已索引 {count} 个片段。"));
+                    match gc.refresh_annotations() {
+                        Err(err) => {
+                            gc.error(&err.to_string());
+                        }
+                        _ => {
+                            gc.message(&format!("书库已索引 {count} 个片段。"));
+                        }
                     }
                     glib::ControlFlow::Break
                 }
@@ -2550,13 +2563,14 @@ impl GuiContext {
                     .update(annotation.id, draft)
             })();
             match result {
-                Ok(()) => {
-                    if let Err(err) = gc.refresh_annotations() {
+                Ok(()) => match gc.refresh_annotations() {
+                    Err(err) => {
                         gc.error(&err.to_string());
-                    } else {
+                    }
+                    _ => {
                         gc.message("已更新批注。");
                     }
-                }
+                },
                 Err(err) => gc.error(&err.to_string()),
             }
         });
@@ -2681,15 +2695,18 @@ fn show(
         }
         // previous opened
         Ok(None) => {}
-        Err(err) => {
-            if let Some(window) = app.active_window() {
+        Err(err) => match app.active_window() {
+            Some(window) => {
                 alert("Failed start tbr", &err.to_string(), &window);
-            } else if let Some(window) = app.windows().get(0) {
-                alert("Failed start tbr", &err.to_string(), window);
-            } else {
-                eprintln!("Failed start tbr: {}", err.to_string());
             }
-        }
+            _ => {
+                if let Some(window) = app.windows().get(0) {
+                    alert("Failed start tbr", &err.to_string(), window);
+                } else {
+                    eprintln!("Failed start tbr: {}", err.to_string());
+                }
+            }
+        },
     }
 }
 

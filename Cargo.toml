@@ -7,7 +7,8 @@ keywords = ["terminal", "gui", "ebook", "epub"]
 license = "GPL-2.0-only"
 readme = "README.md"
 categories = ["command-line-utilities"]
-edition = "2021"
+rust-version = "1.92"
+edition = "2024"
 
 [features]
 default = ["gui"]
@@ -67,8 +68,8 @@ fluent = { version = "0.16", optional = true }
 unic-langid = { version = "0.9", optional = true }
 sys-locale = { version = "0.3", optional = true }
 
-gtk4 = { version = "0.8", features = ["v4_12"], optional = true }
-pangocairo = { version = "0.19", optional = true }
+gtk4 = { version = "0.11", features = ["v4_12"], optional = true }
+pangocairo = { version = "0.22", optional = true }
 ab_glyph = { version = "0.2", optional = true }
 resvg = { version = "0.41", optional = true }
 fontdb = { version = "0.16", optional = true }

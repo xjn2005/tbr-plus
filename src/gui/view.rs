@@ -5,7 +5,7 @@ use gtk4::gdk::{Display, ModifierType};
 use gtk4::pango::Layout as PangoContext;
 use gtk4::prelude::{EventControllerExt, GestureDragExt, GestureExt, ObjectExt, WidgetExt};
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
-use gtk4::Scrollable;
+use gtk4::{Accessible, Buildable, ConstraintTarget, Scrollable};
 use gtk4::{
     gdk, glib, CssProvider, EventControllerMotion, EventControllerScroll,
     EventControllerScrollFlags, GestureClick, GestureDrag,
@@ -44,7 +44,7 @@ pub enum ClickTarget {
 glib::wrapper! {
     pub struct GuiView(ObjectSubclass<imp::GuiView>)
         @extends gtk4::Widget, gtk4::DrawingArea,
-        @implements Scrollable
+        @implements Accessible, Buildable, ConstraintTarget, Scrollable
     ;
 }
 
@@ -501,8 +501,8 @@ mod imp {
         fn snapshot(&self, snapshot: &Snapshot) {
             let data = self.data.borrow();
             let obj = self.obj();
-            let width = obj.width() as f32;
-            let height = obj.height() as f32;
+            let width = WidgetExt::width(obj.as_ref()) as f32;
+            let height = WidgetExt::height(obj.as_ref()) as f32;
             let rect = graphene::Rect::new(0.0, 0.0, width, height);
             let cairo = snapshot.append_cairo(&rect);
             let render = self.render.borrow();

@@ -435,18 +435,21 @@ impl<C, R: Render<C> + ?Sized> Controller<C, R> {
 
     fn do_goto_toc(&mut self, trace_info: TraceInfo, context: &mut C) -> Option<String> {
         if self.reading.chapter != trace_info.chapter {
-            if let Ok(Some(new_chapter)) = self.book.goto_chapter(trace_info.chapter) {
-                self.reading.chapter = new_chapter;
-                if new_chapter == trace_info.chapter {
-                    self.reading.line = trace_info.line;
-                    self.reading.position = trace_info.offset;
-                } else {
-                    // would happen???
-                    self.reading.line = 0;
-                    self.reading.position = 0;
+            match self.book.goto_chapter(trace_info.chapter) {
+                Ok(Some(new_chapter)) => {
+                    self.reading.chapter = new_chapter;
+                    if new_chapter == trace_info.chapter {
+                        self.reading.line = trace_info.line;
+                        self.reading.position = trace_info.offset;
+                    } else {
+                        // would happen???
+                        self.reading.line = 0;
+                        self.reading.position = 0;
+                    }
                 }
-            } else {
-                return None;
+                _ => {
+                    return None;
+                }
             }
         } else {
             self.reading.line = trace_info.line;

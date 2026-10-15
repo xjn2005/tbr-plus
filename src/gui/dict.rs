@@ -155,23 +155,24 @@ impl DictionaryBook {
                 render_definition(single, &mut text, &self.replacer);
             }
             text.push_str(HTML_DEFINITION_TAIL);
-            if let Ok((content, _)) = html_parser::parse(
+            match html_parser::parse(
                 HtmlParseOptions::new(&text)
                     .with_font_family(&mut self.font_families)
                     .with_custom_title(String::from(word)),
             ) {
-                content
-            } else {
-                let mut text = "<html><body>".to_string();
-                for single in &mut *results {
-                    render_definition_text(single, &mut text);
+                Ok((content, _)) => content,
+                _ => {
+                    let mut text = "<html><body>".to_string();
+                    for single in &mut *results {
+                        render_definition_text(single, &mut text);
+                    }
+                    text.push_str("</body></html>");
+                    html_parser::parse(
+                        HtmlParseOptions::new(&text).with_font_family(&mut self.font_families),
+                    )
+                    .unwrap()
+                    .0
                 }
-                text.push_str("</body></html>");
-                html_parser::parse(
-                    HtmlParseOptions::new(&text).with_font_family(&mut self.font_families),
-                )
-                .unwrap()
-                .0
             }
         } else {
             let mut text = "<html><body>".to_string();

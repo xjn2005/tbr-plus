@@ -78,7 +78,7 @@ impl LibrarySearchPanel {
 }
 
 fn set_hits(list: &ListBox, hits: &Rc<RefCell<Vec<SearchHit>>>, results: Vec<SearchHit>) {
-    while let Some(child) = list.first_child() {
+    while let Some(child) = { list.first_child() } {
         list.remove(&child);
     }
     if results.is_empty() {

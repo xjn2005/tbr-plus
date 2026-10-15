@@ -220,34 +220,10 @@ where book_id = ?
 order by created_at, annotation_id
 	",
             [book_id.as_bytes().as_slice()],
-            book_id,
         )
     }
 
-    pub fn list_for_chapter(
-        &self,
-        book_id: &BookId,
-        inner_book: usize,
-        chapter: usize,
-    ) -> Result<Vec<Annotation>> {
-        self.list(
-            "
-select annotation_id, inner_book, chapter, line, start_char, end_line, end_char,
-       quote, prefix, suffix, color, note, starred, status, created_at, updated_at
-from annotations
-where book_id = ? and inner_book = ? and chapter = ?
-order by line, start_char, created_at, annotation_id
-",
-            params![
-                book_id.as_bytes().as_slice(),
-                inner_book as i64,
-                chapter as i64
-            ],
-            book_id,
-        )
-    }
-
-    fn list<P: Params>(&self, query: &str, params: P, book_id: &BookId) -> Result<Vec<Annotation>> {
+    fn list<P: Params>(&self, query: &str, params: P) -> Result<Vec<Annotation>> {
         let mut statement = self.connection.prepare(query)?;
         let records = statement.query_map(params, |row| {
             let color: String = row.get(10)?;
@@ -258,7 +234,6 @@ order by line, start_char, created_at, annotation_id
                 AnnotationStatus::from_db_value(&status).ok_or(rusqlite::Error::InvalidQuery)?;
             Ok(Annotation {
                 id: row.get(0)?,
-                book_id: book_id.clone(),
                 anchor: Anchor::from_parts(
                     row.get::<_, i64>(1)? as usize,
                     row.get::<_, i64>(2)? as usize,
@@ -276,7 +251,6 @@ order by line, start_char, created_at, annotation_id
                 starred: row.get::<_, i64>(12)? != 0,
                 status,
                 created_at: row.get(14)?,
-                updated_at: row.get(15)?,
             })
         })?;
         let mut annotations = vec![];

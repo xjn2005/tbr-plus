@@ -89,22 +89,24 @@ impl<R: Read + Seek> EpubZipArchive<R> {
 impl<R: Read + Seek> EpubArchive for EpubZipArchive<R> {
     #[inline]
     fn is_encrypted(&self) -> bool {
-        self.zip
+        let encrypted = self.zip
             .borrow()
             .file_names()
             .find(|f| *f == "META-INF/encryption.xml")
-            .is_some()
+            .is_some();
+        encrypted
     }
 
     fn content(&self, path: &str) -> Result<Vec<u8>> {
-        match self.zip.borrow_mut().by_name(path) {
+        let result = match self.zip.borrow_mut().by_name(path) {
             Ok(mut file) => {
                 let mut buf = vec![];
                 file.read_to_end(&mut buf)?;
                 Ok(buf)
             }
             Err(e) => Err(anyhow!("failed load {}: {}", path, e.to_string())),
-        }
+        };
+        result
     }
 
     fn exists(&self, path: &str) -> bool {
@@ -386,15 +388,16 @@ impl Book for EpubBook {
     }
 
     fn image<'h>(&'h self, href: &'h str) -> Option<ImageData<'h>> {
-        if let Ok(path) = chapter_path(self.current_chapter(), &self.content_opf) {
-            let cwd = path_cwd(path);
-            let full_path = concat_path_str(cwd, href)?;
-            let bytes = frozen_map_get!(self.images, full_path, true, || {
-                self.archive.content(&full_path).ok()
-            })?;
-            Some(ImageData::Borrowed((Cow::Owned(full_path), bytes)))
-        } else {
-            None
+        match chapter_path(self.current_chapter(), &self.content_opf) {
+            Ok(path) => {
+                let cwd = path_cwd(path);
+                let full_path = concat_path_str(cwd, href)?;
+                let bytes = frozen_map_get!(self.images, full_path, true, || {
+                    self.archive.content(&full_path).ok()
+                })?;
+                Some(ImageData::Borrowed((Cow::Owned(full_path), bytes)))
+            }
+            _ => None,
         }
     }
 

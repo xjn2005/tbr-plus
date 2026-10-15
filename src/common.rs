@@ -182,7 +182,7 @@ pub fn char_width(ch: char) -> usize {
 
 #[macro_export]
 macro_rules! frozen_map_get {
-    ($map:expr, $key:ident, ||$resolver:block) => {{
+    ($map:expr_2021, $key:ident, ||$resolver:block) => {{
         let value = if let Some(value) = $map.get(&$key) {
             value
         } else {
@@ -191,7 +191,7 @@ macro_rules! frozen_map_get {
         };
         Some(value)
     }};
-    ($map:expr, $key:ident, true, ||$resolver:block) => {{
+    ($map:expr_2021, $key:ident, true, ||$resolver:block) => {{
         let value = if let Some(value) = $map.get(&$key) {
             value
         } else {

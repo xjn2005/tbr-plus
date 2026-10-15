@@ -103,7 +103,7 @@ impl AnnotationPanel {
     }
 
     pub(super) fn set_annotations(&self, annotations: Vec<Annotation>) {
-        while let Some(child) = self.list.first_child() {
+        while let Some(child) = { self.list.first_child() } {
             self.list.remove(&child);
         }
         if annotations.is_empty() {

@@ -1240,32 +1240,36 @@ pub trait GuiRender {
                             Some(render_size)
                         } else {
                             // font size changed
-                            if let Some((data, render_size)) = load_image_and_resize(
+                            match load_image_and_resize(
                                 image,
                                 &char_style.font_scale,
                                 font_size,
                                 view_size,
                                 data.bytes(),
                             ) {
-                                *image_data = data;
-                                Some(render_size)
-                            } else {
-                                None
+                                Some((data, render_size)) => {
+                                    *image_data = data;
+                                    Some(render_size)
+                                }
+                                _ => None,
                             }
                         }
                     }
                     Entry::Vacant(v) => {
-                        if let Some((data, render_size)) = load_image_and_resize(
+                        match load_image_and_resize(
                             image,
                             &char_style.font_scale,
                             font_size,
                             view_size,
                             data.bytes(),
                         ) {
-                            v.insert(data);
-                            Some(render_size)
-                        } else {
-                            return None;
+                            Some((data, render_size)) => {
+                                v.insert(data);
+                                Some(render_size)
+                            }
+                            _ => {
+                                return None;
+                            }
                         }
                     }
                 }?;

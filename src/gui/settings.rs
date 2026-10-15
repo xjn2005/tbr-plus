@@ -407,8 +407,8 @@ where
         let i18n = i18n.clone();
         let cfg = cfg.clone();
         ok_btn.connect_clicked(move |_| {
-            let default_font_size =
-                if let Ok(default_font_size) = font_size_entry.text().to_string().trim().parse() {
+            let default_font_size = match font_size_entry.text().to_string().trim().parse() {
+                Ok(default_font_size) => {
                     if default_font_size < MIN_FONT_SIZE || default_font_size > MAX_FONT_SIZE {
                         alert(
                             &i18n.msg("alert-error-title"),
@@ -418,14 +418,16 @@ where
                         return;
                     }
                     default_font_size
-                } else {
+                }
+                _ => {
                     alert(
                         &i18n.msg("alert-error-title"),
                         &i18n.msg("invalid-default-font-size"),
                         &dialog,
                     );
                     return;
-                };
+                }
+            };
             let render_han = render_han_cb.is_active();
             let locale = {
                 let idx = locale_dropdown.selected();
