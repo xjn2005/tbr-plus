@@ -971,10 +971,8 @@ mod imp {
                     RenderCell::Image(_, link_index) => {
                         if state.eq(&(ModifierType::CONTROL_MASK)) {
                             ClickTarget::Image(line.line(), dc.offset)
-                        } else if let Some(link_index) = link_index {
-                            ClickTarget::Link(line.line(), link_index)
                         } else {
-                            return None;
+                            ClickTarget::Link(line.line(), link_index?)
                         }
                     }
                     RenderCell::Char(_) => ClickTarget::Char(line.line(), dc.offset),

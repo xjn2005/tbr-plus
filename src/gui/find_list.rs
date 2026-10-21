@@ -317,7 +317,7 @@ fn find(
         if let Err(err) = do_find(filename, search_book, regex, tx, state) {
             match err {
                 SearchError::Canceled => {}
-                SearchError::Custom(msg) => eprintln!("Finding stopped with error: {}", &msg),
+                SearchError::Custom(msg) => eprintln!("Finding stopped with error: {}", msg),
             }
         }
     });

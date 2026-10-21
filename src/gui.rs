@@ -1097,16 +1097,11 @@ fn switch_stack(tab_name: &str, gc: &GuiContext, toggle: bool) -> bool {
         true
     } else {
         match stack.visible_child_name() {
-            Some(current_tab_name) => {
-                if current_tab_name == tab_name {
-                    if toggle {
-                        gc.toggle_sidebar();
-                        false
-                    } else {
-                        true
-                    }
+            Some(current_tab_name) if current_tab_name == tab_name => {
+                if toggle {
+                    gc.toggle_sidebar();
+                    false
                 } else {
-                    stack.set_visible_child_name(tab_name);
                     true
                 }
             }
@@ -1661,9 +1656,7 @@ fn setup_env() -> Result<bool> {
     use std::fs;
 
     // any better way to know if a usable backend for gtk4 available?
-    if !env::var("WAYLAND_DISPLAY")
-        .map_or_else(|_| env::var("DISPLAY").map_or(false, |_| true), |_| true)
-    {
+    if !(env::var("WAYLAND_DISPLAY").is_ok() || env::var("DISPLAY").is_ok()) {
         return Ok(false);
     }
 

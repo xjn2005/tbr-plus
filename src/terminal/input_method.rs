@@ -45,7 +45,7 @@ struct Fcitx {
 impl Fcitx {
     fn detect_active(cmd: &str) -> Option<bool> {
         if let Ok(output) = Command::new(cmd).output() {
-            Some(output.stdout.get(0) == Some(&b'2'))
+            Some(output.stdout.first() == Some(&b'2'))
         } else {
             None
         }
@@ -53,15 +53,15 @@ impl Fcitx {
 
     fn new() -> Option<Self> {
         if let Some(active) = Fcitx::detect_active("fcitx5-remote") {
-            return Some(Fcitx {
+            Some(Fcitx {
                 version5: true,
                 active,
-            });
+            })
         } else if let Some(active) = Fcitx::detect_active("fcitx-remote") {
-            return Some(Fcitx {
+            Some(Fcitx {
                 version5: false,
                 active,
-            });
+            })
         } else {
             None
         }
@@ -84,11 +84,7 @@ impl InputMethod for Fcitx {
         } else {
             Fcitx::detect_active("fcitx-remote")
         };
-        if let Some(active) = active {
-            active
-        } else {
-            false
-        }
+        active.unwrap_or_default()
     }
 
     fn set_active(&mut self, active: Option<bool>, update_restore: bool) {
@@ -109,10 +105,10 @@ impl InputMethod for Fcitx {
 /// exec command and ignore error
 #[cfg(unix)]
 fn run_command(cmd: &str, args: &[&str]) -> bool {
-    if let Ok(mut child) = Command::new(cmd).args(args).spawn() {
-        if let Ok(status) = child.wait() {
-            return status.success();
-        }
+    if let Ok(mut child) = Command::new(cmd).args(args).spawn()
+        && let Ok(status) = child.wait()
+    {
+        return status.success();
     }
     false
 }
