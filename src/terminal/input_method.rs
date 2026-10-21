@@ -52,19 +52,17 @@ impl Fcitx {
     }
 
     fn new() -> Option<Self> {
-        if let Some(active) = Fcitx::detect_active("fcitx5-remote") {
-            Some(Fcitx {
+        Fcitx::detect_active("fcitx5-remote")
+            .map(|active| Fcitx {
                 version5: true,
                 active,
             })
-        } else if let Some(active) = Fcitx::detect_active("fcitx-remote") {
-            Some(Fcitx {
-                version5: false,
-                active,
+            .or_else(|| {
+                Fcitx::detect_active("fcitx-remote").map(|active| Fcitx {
+                    version5: false,
+                    active,
+                })
             })
-        } else {
-            None
-        }
     }
 
     fn set_active_internal(&self, active: bool) {
