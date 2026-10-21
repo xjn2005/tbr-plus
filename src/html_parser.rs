@@ -1,10 +1,10 @@
 use std::cmp::Ordering;
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::ops::{Deref, Range};
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use bitflags::bitflags;
 use ego_tree::iter::Children;
 use ego_tree::{NodeId, NodeRef};
@@ -20,9 +20,9 @@ use lightningcss::properties::text::{
     TextDecoration as CssTextDecoration, TextDecorationLine as CssTextDecorationLine,
     TextDecorationStyle as CssTextDecorationStyle,
 };
-use lightningcss::properties::{border, font, Property};
+use lightningcss::properties::{Property, border, font};
 use lightningcss::rules::font_face::FontFaceProperty;
-use lightningcss::rules::{font_face, CssRule};
+use lightningcss::rules::{CssRule, font_face};
 use lightningcss::stylesheet::{ParserOptions, StyleSheet};
 use lightningcss::traits::Parse;
 use lightningcss::values;
@@ -33,7 +33,7 @@ use markup5ever::{LocalName, Namespace, Prefix, QualName};
 use scraper::node::Element;
 use scraper::{Html, Node, Selector};
 
-use crate::book::{Line, EMPTY_CHAPTER_CONTENT, IMAGE_CHAR};
+use crate::book::{EMPTY_CHAPTER_CONTENT, IMAGE_CHAR, Line};
 use crate::color::Color32;
 use crate::common::Position;
 
@@ -421,7 +421,7 @@ impl HtmlContent {
     }
     #[inline]
     pub fn title(&self) -> Option<&str> {
-        self.title.as_ref().map(|s| s.as_str())
+        self.title.as_deref()
     }
     #[inline]
     pub fn lines(&self) -> &Vec<Line> {
@@ -476,104 +476,96 @@ impl<'a> HtmlParser<'a> {
         // will hack families depend on it
         for (path, style_sheet) in stylesheets {
             for rule in &style_sheet.rules.0 {
-                match rule {
-                    CssRule::FontFace(face) => {
-                        if let (Some(path), Some(resolver)) = (&path, self.resolver) {
-                            let mut src = None;
-                            let mut family = None;
-                            for prop in &face.properties {
-                                match prop {
-                                    FontFaceProperty::Source(source) => src = Some(source),
-                                    FontFaceProperty::FontFamily(ff) => match ff {
-                                        FontFamily::Generic(gff) => family = Some(gff.as_str()),
-                                        FontFamily::FamilyName(name) => {
-                                            family = Some(name.as_ref())
-                                        }
-                                    },
-                                    FontFaceProperty::FontStyle(_) => {}
-                                    FontFaceProperty::FontWeight(_) => {}
-                                    FontFaceProperty::FontStretch(_) => {}
-                                    FontFaceProperty::UnicodeRange(_) => {}
-                                    FontFaceProperty::Custom(_) => {}
-                                }
-                            }
-
-                            fn append_local(locals: &mut Option<String>, local: &str) {
-                                let locals = if let Some(locals) = locals {
-                                    locals.push(',');
-                                    locals
-                                } else {
-                                    locals.insert(String::new())
-                                };
-                                locals.push_str(local);
-                            }
-                            if let (Some(source), Some(family)) = (src, family) {
-                                let mut sources = vec![];
-                                let mut locals = None;
-                                for src in source {
-                                    match src {
-                                        font_face::Source::Url(font_face::UrlSource {
-                                            url: values::url::Url { url, .. },
-                                            ..
-                                        }) => sources.push(resolver.resolve(path, url)),
-                                        font_face::Source::Local(FontFamily::FamilyName(name)) => {
-                                            append_local(&mut locals, &name)
-                                        }
-                                        font_face::Source::Local(FontFamily::Generic(name)) => {
-                                            append_local(&mut locals, name.as_str())
-                                        }
-                                    }
-                                }
-                                self.font_faces.push(HtmlFontFaceDesc {
-                                    sources,
-                                    family: family.to_owned(),
-                                });
-                                self.font_face_map.insert(family, locals);
-                            }
+                if let CssRule::FontFace(face) = rule
+                    && let (Some(path), Some(resolver)) = (&path, self.resolver)
+                {
+                    let mut src = None;
+                    let mut family = None;
+                    for prop in &face.properties {
+                        match prop {
+                            FontFaceProperty::Source(source) => src = Some(source),
+                            FontFaceProperty::FontFamily(ff) => match ff {
+                                FontFamily::Generic(gff) => family = Some(gff.as_str()),
+                                FontFamily::FamilyName(name) => family = Some(name.as_ref()),
+                            },
+                            FontFaceProperty::FontStyle(_) => {}
+                            FontFaceProperty::FontWeight(_) => {}
+                            FontFaceProperty::FontStretch(_) => {}
+                            FontFaceProperty::UnicodeRange(_) => {}
+                            FontFaceProperty::Custom(_) => {}
                         }
                     }
-                    _ => {}
+
+                    fn append_local(locals: &mut Option<String>, local: &str) {
+                        let locals = if let Some(locals) = locals {
+                            locals.push(',');
+                            locals
+                        } else {
+                            locals.insert(String::new())
+                        };
+                        locals.push_str(local);
+                    }
+                    if let (Some(source), Some(family)) = (src, family) {
+                        let mut sources = vec![];
+                        let mut locals = None;
+                        for src in source {
+                            match src {
+                                font_face::Source::Url(font_face::UrlSource {
+                                    url: values::url::Url { url, .. },
+                                    ..
+                                }) => sources.push(resolver.resolve(path, url)),
+                                font_face::Source::Local(FontFamily::FamilyName(name)) => {
+                                    append_local(&mut locals, name)
+                                }
+                                font_face::Source::Local(FontFamily::Generic(name)) => {
+                                    append_local(&mut locals, name.as_str())
+                                }
+                            }
+                        }
+                        self.font_faces.push(HtmlFontFaceDesc {
+                            sources,
+                            family: family.to_owned(),
+                        });
+                        self.font_face_map.insert(family, locals);
+                    }
                 }
             }
         }
 
         for (_, style_sheet) in stylesheets {
             for rule in &style_sheet.rules.0 {
-                match rule {
-                    CssRule::Style(style_rule) => {
-                        let mut styles = vec![];
-                        for property in &style_rule.declarations.important_declarations {
-                            if let Some(style) = self.convert_style(property) {
-                                insert_or_replace_tag(&mut styles, style, true)
-                            }
+                if let CssRule::Style(style_rule) = rule {
+                    let mut styles = vec![];
+                    for property in &style_rule.declarations.important_declarations {
+                        if let Some(style) = self.convert_style(property) {
+                            insert_or_replace_tag(&mut styles, style, true)
                         }
-                        for property in &style_rule.declarations.declarations {
-                            if let Some(style) = self.convert_style(property) {
-                                insert_or_replace_tag(&mut styles, style, false)
-                            }
-                        }
-                        if styles.len() == 0 {
-                            continue;
-                        }
-                        let selector_str = style_rule.selectors.to_string();
-                        if let Ok(selector) = Selector::parse(&selector_str) {
-                            for element in document.select(&selector) {
-                                let styles = styles.clone();
-                                match self.element_tags.entry(element.id()) {
-                                    Entry::Occupied(o) => {
-                                        let orig = o.into_mut();
-                                        for new_style in styles {
-                                            insert_or_replace_tag(orig, new_style.0, new_style.1);
-                                        }
-                                    }
-                                    Entry::Vacant(v) => {
-                                        v.insert(styles);
-                                    }
-                                };
-                            }
-                        };
                     }
-                    _ => {}
+                    for property in &style_rule.declarations.declarations {
+                        if let Some(style) = self.convert_style(property) {
+                            insert_or_replace_tag(&mut styles, style, false)
+                        }
+                    }
+                    if styles.is_empty() {
+                        continue;
+                    }
+                    let selector_str = style_rule.selectors.to_string();
+                    if let Ok(selector) = Selector::parse(&selector_str) {
+                        for element in document.select(&selector) {
+                            let styles = styles.clone();
+                            match self.element_tags.entry(element.id()) {
+                                Entry::Occupied(o) => {
+                                    let orig = o.into_mut();
+                                    for new_style in styles {
+                                        insert_or_replace_tag(orig, new_style.0, new_style.1);
+                                    }
+                                }
+                                Entry::Vacant(v) => {
+                                    v.insert(styles);
+                                }
+                            };
+                        }
+                    };
                 }
             }
         }
@@ -590,7 +582,7 @@ impl<'a> HtmlParser<'a> {
     ) {
         let lines = &mut self.lines;
         while let Some(last_line) = lines.last() {
-            if last_line.len() == 0 {
+            if last_line.is_empty() {
                 lines.pop();
             } else {
                 break;
@@ -641,10 +633,10 @@ impl<'a> HtmlParser<'a> {
     }
 
     fn load_title(&mut self, title_node: NodeRef<Node>) {
-        if let Some(child) = title_node.children().next() {
-            if let Node::Text(text) = child.value() {
-                self.title = Some(text.to_string());
-            }
+        if let Some(child) = title_node.children().next()
+            && let Node::Text(text) = child.value()
+        {
+            self.title = Some(text.to_string());
         }
     }
 
@@ -661,8 +653,8 @@ impl<'a> HtmlParser<'a> {
                 let string = contents.text.to_string();
                 let text = string.trim_matches(|c: char| c.is_ascii_whitespace());
                 let line = self.lines.last_mut().unwrap();
-                if text.len() > 0 {
-                    if line.len() > 0
+                if !text.is_empty() {
+                    if !line.is_empty()
                         && line
                             .char_at(line.len() - 1)
                             .unwrap()
@@ -757,21 +749,20 @@ impl<'a> HtmlParser<'a> {
                         self.convert_node_children(node.children());
                     }
                     local_name!("font") => {
-                        if let Some(level_text) = element.attr("size") {
-                            if let Ok(level) = level_text.parse::<u8>() {
-                                replace_font_size(&mut element_tags, level, true);
-                            }
+                        if let Some(level_text) = element.attr("size")
+                            && let Ok(level) = level_text.parse::<u8>()
+                        {
+                            replace_font_size(&mut element_tags, level, true);
                         }
-                        if let Some(color_text) = element.attr("color") {
-                            if let Ok(color) = CssColor::parse_string(color_text) {
-                                if let Some(color) = self.css_color(&color) {
-                                    insert_or_replace_tag(
-                                        &mut element_tags,
-                                        ParseTag::Style(TextStyle::Color(color)),
-                                        false,
-                                    );
-                                }
-                            }
+                        if let Some(color_text) = element.attr("color")
+                            && let Ok(color) = CssColor::parse_string(color_text)
+                            && let Some(color) = self.css_color(&color)
+                        {
+                            insert_or_replace_tag(
+                                &mut element_tags,
+                                ParseTag::Style(TextStyle::Color(color)),
+                                false,
+                            );
                         }
                         self.convert_node_children(node.children());
                     }
@@ -839,7 +830,7 @@ impl<'a> HtmlParser<'a> {
                     }
                 }
             }
-            Node::Document {} => self.convert_node_children(node.children()),
+            Node::Document => self.convert_node_children(node.children()),
             _ => {}
         }
     }
@@ -847,17 +838,17 @@ impl<'a> HtmlParser<'a> {
     #[inline]
     fn load_element_tags(&mut self, element: &Element, node_id: NodeId) -> LeveledParseTagSet {
         let mut element_tags = vec![];
-        if let Some(style) = element.attr("style") {
-            if let Ok(declaration) = DeclarationBlock::parse_string(style, style_parse_options()) {
-                for property in &declaration.declarations {
-                    if let Some(tag) = self.convert_style(property) {
-                        insert_or_replace_tag(&mut element_tags, tag, false);
-                    }
+        if let Some(style) = element.attr("style")
+            && let Ok(declaration) = DeclarationBlock::parse_string(style, style_parse_options())
+        {
+            for property in &declaration.declarations {
+                if let Some(tag) = self.convert_style(property) {
+                    insert_or_replace_tag(&mut element_tags, tag, false);
                 }
-                for property in &declaration.important_declarations {
-                    if let Some(tag) = self.convert_style(property) {
-                        insert_or_replace_tag(&mut element_tags, tag, false);
-                    }
+            }
+            for property in &declaration.important_declarations {
+                if let Some(tag) = self.convert_style(property) {
+                    insert_or_replace_tag(&mut element_tags, tag, false);
                 }
             }
         }
@@ -893,13 +884,13 @@ impl<'a> HtmlParser<'a> {
     }
 
     fn newline_for_class(&mut self, element: &Element) {
-        if !self.lines.last().unwrap().is_empty() {
-            if let Some(class) = element.attr("class") {
-                for class_name in DIV_PUSH_CLASSES {
-                    if class.contains(class_name) {
-                        self.new_line();
-                        return;
-                    }
+        if !self.lines.last().unwrap().is_empty()
+            && let Some(class) = element.attr("class")
+        {
+            for class_name in DIV_PUSH_CLASSES {
+                if class.contains(class_name) {
+                    self.new_line();
+                    return;
                 }
             }
         }
@@ -1002,7 +993,7 @@ impl<'a> HtmlParser<'a> {
             for family in families {
                 let name = match family {
                     FontFamily::Generic(name) => name.as_str(),
-                    FontFamily::FamilyName(name) => &name,
+                    FontFamily::FamilyName(name) => name,
                 };
                 if !string.is_empty() {
                     string.push(',');
@@ -1113,7 +1104,7 @@ fn setup_block_style(
         TextStyle::Border(border_lines, color) => {
             block_styles.push(BlockStyle::Border {
                 range: start.line..end_line + 1,
-                lines: border_lines.clone(),
+                lines: *border_lines,
                 color: color.clone(),
             });
             None
@@ -1343,32 +1334,28 @@ fn load_stylesheets<'d>(
 ) -> Vec<(Option<PathBuf>, StyleSheet<'d, 'd>)> {
     let mut stylesheets = vec![];
 
-    if let Some(resolver) = resolver {
-        if let Ok(link_selector) = Selector::parse("link") {
-            let selection = document.select(&link_selector);
-            for element in selection.into_iter() {
-                if let Some(href) = element.value().attr("href") {
-                    if href.to_lowercase().ends_with(".css") {
-                        if let Some((path, content)) = resolver.css(href) {
-                            if let Ok(style_sheet) =
-                                StyleSheet::parse(&content, style_parse_options())
-                            {
-                                stylesheets.push((Some(path), style_sheet));
-                            }
-                        }
-                    }
-                }
+    if let Some(resolver) = resolver
+        && let Ok(link_selector) = Selector::parse("link")
+    {
+        let selection = document.select(&link_selector);
+        for element in selection.into_iter() {
+            if let Some(href) = element.value().attr("href")
+                && href.to_lowercase().ends_with(".css")
+                && let Some((path, content)) = resolver.css(href)
+                && let Ok(style_sheet) = StyleSheet::parse(content, style_parse_options())
+            {
+                stylesheets.push((Some(path), style_sheet));
             }
         }
     }
 
     // load embedded styles, , will overwrite previous
     if let Ok(style_selector) = Selector::parse("style") {
-        let mut style_iterator = document.select(&style_selector);
-        while let Some(style) = style_iterator.next() {
-            let mut text_iterator = style.text();
-            while let Some(text) = text_iterator.next() {
-                if let Ok(style_sheet) = StyleSheet::parse(&text, style_parse_options()) {
+        let style_iterator = document.select(&style_selector);
+        for style in style_iterator {
+            let text_iterator = style.text();
+            for text in text_iterator {
+                if let Ok(style_sheet) = StyleSheet::parse(text, style_parse_options()) {
                     let path = resolver.map(|r| r.cwd());
                     stylesheets.push((path, style_sheet));
                 }
@@ -1377,13 +1364,12 @@ fn load_stylesheets<'d>(
     }
 
     // load custom styles, will overwrite previous
-    if let Some(resolver) = resolver {
-        if let Some(custom_style) = resolver.custom_style() {
-            if let Ok(style_sheet) = StyleSheet::parse(custom_style, style_parse_options()) {
-                let path = resolver.cwd();
-                stylesheets.push((Some(path), style_sheet));
-            }
-        }
+    if let Some(resolver) = resolver
+        && let Some(custom_style) = resolver.custom_style()
+        && let Ok(style_sheet) = StyleSheet::parse(custom_style, style_parse_options())
+    {
+        let path = resolver.cwd();
+        stylesheets.push((Some(path), style_sheet));
     }
 
     stylesheets
@@ -1396,11 +1382,11 @@ pub fn parse_stylesheet(css: &str, strict: bool) -> Result<StyleSheet<'_, '_>> {
     if !strict {
         options.error_recovery = true;
     }
-    StyleSheet::parse(css, options).map_err(|err| anyhow!("{}", err.to_string()))
+    StyleSheet::parse(css, options).map_err(|err| anyhow!("{}", err))
 }
 
 pub fn parse(options: HtmlParseOptions) -> Result<(HtmlContent, Vec<HtmlFontFaceDesc>)> {
-    let html = Html::parse_document(&options.html);
+    let html = Html::parse_document(options.html);
     let stylesheets = load_stylesheets(&html, options.resolver);
 
     let mut parser = HtmlParser {
@@ -1427,15 +1413,14 @@ pub fn parse(options: HtmlParseOptions) -> Result<(HtmlContent, Vec<HtmlFontFace
     };
     if let Some(head) = html.select(&head_selector).next() {
         for child in head.children() {
-            match child.value() {
-                Node::Element(element) => match element.name.local {
+            if let Node::Element(element) = child.value() {
+                match element.name.local {
                     local_name!("title") => {
                         parser.load_title(child);
                         break;
                     }
                     _ => {}
-                },
-                _ => {}
+                }
             }
         }
     }

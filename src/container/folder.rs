@@ -1,7 +1,7 @@
 use crate::book::BookLoader;
 use crate::container::{BookContent, BookName, Container, ContainerLoader};
-use anyhow::{anyhow, Result};
-use lexical_sort::{natural_lexical_cmp, StringSort};
+use anyhow::{Result, anyhow};
+use lexical_sort::{StringSort, natural_lexical_cmp};
 use std::fs;
 use std::fs::ReadDir;
 use std::path::PathBuf;
@@ -11,7 +11,7 @@ pub(crate) struct FolderLoader {}
 
 impl ContainerLoader for FolderLoader {
     fn accept(&self, filename: &str) -> bool {
-        PathBuf::from_str(filename).map_or(false, |path| path.is_dir())
+        PathBuf::from_str(filename).is_ok_and(|path| path.is_dir())
     }
 
     fn open(&self, filename: &str, book_loader: &BookLoader) -> Result<Box<dyn Container>> {

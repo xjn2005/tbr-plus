@@ -1,11 +1,11 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::path::PathBuf;
 
-use crate::book::{Book, LoadingChapter, EMPTY_CHAPTER_CONTENT};
+use crate::BookLoader;
+use crate::book::{Book, EMPTY_CHAPTER_CONTENT, LoadingChapter};
 use crate::config::{BookLoadingInfo, ReadingInfo};
 use crate::container::folder::FolderLoader;
 use crate::container::zip::ZipLoader;
-use crate::BookLoader;
 
 mod folder;
 mod zip;
@@ -32,7 +32,7 @@ impl ContainerManager {
                 return Ok(book);
             }
         }
-        Ok(Box::new(DummyContainer::new(&filename)))
+        Ok(Box::new(DummyContainer::new(filename)))
     }
 
     pub fn load_book(
@@ -171,10 +171,10 @@ pub fn load_container(
 ) -> Result<Box<dyn Container>> {
     let container = container_manager.open(filename)?;
     let book_names = container.inner_book_names();
-    if let Some(names) = book_names {
-        if names.len() == 0 {
-            return Err(anyhow!("No content supported."));
-        }
+    if let Some(names) = book_names
+        && names.is_empty()
+    {
+        return Err(anyhow!("No content supported."));
     }
     Ok(container)
 }

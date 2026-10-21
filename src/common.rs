@@ -81,11 +81,11 @@ pub fn with_leading(text: &Line) -> bool {
 
 pub fn length_with_leading(text: &Line, leading_space: usize) -> usize {
     let length = text.len();
-    return if with_leading(text) {
+    if with_leading(text) {
         length + leading_space
     } else {
         length
-    };
+    }
 }
 
 pub(crate) fn plain_text(content: Vec<u8>, full_scan: bool) -> Result<String> {
@@ -129,7 +129,7 @@ pub(crate) fn txt_lines(txt: &str) -> Vec<Line> {
         if c == '\n' {
             lines.push(line);
             line = Line::default();
-        } else if line.len() > 0 || !c.is_whitespace() {
+        } else if !line.is_empty() || !c.is_whitespace() {
             line.push(c);
         }
     }
@@ -148,10 +148,7 @@ pub(crate) fn byte_index_for_char(text: &str, chars: usize, char_index: usize) -
     for _index in 0..char_index {
         indices.next();
     }
-    match indices.next() {
-        Some(index) => Some(index.0),
-        None => None,
-    }
+    indices.next().map(|index| index.0)
 }
 
 pub fn char_index_for_byte(text: &str, chars: usize, byte_index: usize) -> Option<usize> {
@@ -177,7 +174,7 @@ pub fn char_index_for_byte(text: &str, chars: usize, byte_index: usize) -> Optio
 
 #[inline]
 pub fn char_width(ch: char) -> usize {
-    ch.width().unwrap_or_else(|| 0)
+    ch.width().unwrap_or(0)
 }
 
 #[macro_export]

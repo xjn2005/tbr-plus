@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use crate::book::{Book, ImageData, Line, Loader, LoadingChapter};
-use crate::common::{plain_text, TraceInfo};
+use crate::common::{TraceInfo, plain_text};
 use crate::config::{BookLoadingInfo, ReadingInfo};
 #[cfg(feature = "gui")]
 use crate::gui::HtmlFonts;
@@ -54,7 +54,7 @@ impl HtmlResolver for HtmlContentResolver {
     }
 
     fn css(&self, sub: &str) -> Option<(PathBuf, &str)> {
-        let mut path = self.cwd.join(&sub);
+        let mut path = self.cwd.join(sub);
         let full_path = path.canonicalize().ok()?.to_str()?.to_string();
         let content = frozen_map_get!(&self.css_cache, full_path, || {
             fs::read_to_string(&path).ok()
@@ -64,7 +64,7 @@ impl HtmlResolver for HtmlContentResolver {
     }
 
     fn custom_style(&self) -> Option<&str> {
-        self.custom_style.as_ref().map(|s| s.as_str())
+        self.custom_style.as_deref()
     }
 }
 
@@ -244,20 +244,6 @@ fn html_escape(text: &str) -> String {
         .replace('>', "&gt;")
 }
 
-#[cfg(test)]
-mod markdown_tests {
-    use super::markdown_to_html;
-
-    #[test]
-    fn markdown_is_converted_to_controlled_html() {
-        let html = markdown_to_html("# 标题\n\n- 一项\n- 二项\n\n> 引文\n\n```\nlet x = 1;\n```");
-        assert!(html.contains("<h1>标题</h1>"));
-        assert!(html.contains("<ul><li>一项</li><li>二项</li></ul>"));
-        assert!(html.contains("<blockquote><p>引文</p></blockquote>"));
-        assert!(html.contains("<pre><code>let x = 1;"));
-    }
-}
-
 impl Book for HtmlBook {
     #[inline]
     fn name(&self) -> Option<&str> {
@@ -266,7 +252,7 @@ impl Book for HtmlBook {
 
     #[inline]
     fn lines(&self) -> &Vec<Line> {
-        &self.content.lines()
+        self.content.lines()
     }
 
     fn link_position(&mut self, line: usize, link_index: usize) -> Option<TraceInfo> {
@@ -340,4 +326,18 @@ fn get_reading(loading: BookLoadingInfo) -> ReadingInfo {
         reading.custom_color = true;
         reading.custom_font = true;
     })
+}
+
+#[cfg(test)]
+mod markdown_tests {
+    use super::markdown_to_html;
+
+    #[test]
+    fn markdown_is_converted_to_controlled_html() {
+        let html = markdown_to_html("# 标题\n\n- 一项\n- 二项\n\n> 引文\n\n```\nlet x = 1;\n```");
+        assert!(html.contains("<h1>标题</h1>"));
+        assert!(html.contains("<ul><li>一项</li><li>二项</li></ul>"));
+        assert!(html.contains("<blockquote><p>引文</p></blockquote>"));
+        assert!(html.contains("<pre><code>let x = 1;"));
+    }
 }

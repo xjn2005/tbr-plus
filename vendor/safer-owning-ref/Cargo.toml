@@ -1,0 +1,18 @@
+[package]
+name = "owning_ref"
+version = "0.4.2"
+authors = ["Marvin Löbel <loebel.marvin@gmail.com>", "Noam Ta Shma noam.tashma@gmail.com"]
+license = "MIT"
+
+description = "RustSec-recommended safe replacement for owning_ref 0.4."
+readme = "README.md"
+
+repository = "https://github.com/noamtashma/owning-ref-rs"
+keywords = ["reference", "sibling", "field", "owning"]
+
+[lib]
+name = "owning_ref"
+
+[dependencies]
+stable_deref_trait = "1.0.0"
+maybe-dangling = "0.1.1"

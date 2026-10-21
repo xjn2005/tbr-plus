@@ -32,7 +32,7 @@ cursive = { version = "0.20", default-features = false, features = ["crossterm-b
 rusqlite = { version = "0.31", features = ["bundled"] }
 
 [target.'cfg(unix)'.dependencies]
-cursive = { version = "0.20", features = ["toml"] }
+cursive = { version = "0.20", default-features = false, features = ["crossterm-backend", "toml"] }
 rusqlite = { version = "0.31" }
 
 [build-dependencies]
@@ -46,12 +46,12 @@ serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
 toml = "0.8"
 rust-embed = { version = "8.0", features = ["include-exclude"] }
-quick-xml = { version = "0.38", features = ["serialize", "overlapped-lists"] }
+quick-xml = { version = "0.42", features = ["serialize", "overlapped-lists"] }
 unicode-width = "0.1"
 fancy-regex = "0.13"
 chardetng = "0.1"
 encoding_rs = "0.8"
-zip = "4.3"
+zip = "9.0.5"
 lexical-sort = "0.3"
 elsa = "1.8"
 bitflags = "2.5"
@@ -59,8 +59,8 @@ sha2 = "0.10"
 
 # scraper need v0.11
 markup5ever = "0.11"
-scraper = "0.19"
-lightningcss = "=1.0.0-alpha.55"
+scraper = "=0.19.0"
+lightningcss = { version = "=1.0.0-alpha.55", default-features = false, features = ["grid"] }
 ego-tree = "0.6"
 indexmap = "2.0"
 
@@ -81,3 +81,23 @@ html-escape = { version = "0.2", optional = true }
 
 rand = { version = "0.8", optional = true }
 open = { version = "5.0", optional = true }
+
+# These describe established public/UI shapes. Keep `-D warnings` in CI so
+# newly introduced diagnostics still fail the build; revisit these during
+# focused API and renderer refactors rather than changing them in a release fix.
+[lints.clippy]
+extra_unused_lifetimes = "allow"
+field_reassign_with_default = "allow"
+needless_range_loop = "allow"
+ptr_arg = "allow"
+too_many_arguments = "allow"
+type_complexity = "allow"
+upper_case_acronyms = "allow"
+vec_init_then_push = "allow"
+while_let_loop = "allow"
+
+# Cursive 0.20 depends on `owning_ref` 0.4, which RustSec marks as unsound.
+# The vendored code is RustSec's API-compatible `safer_owning_ref` replacement.
+[patch.crates-io]
+owning_ref = { path = "vendor/safer-owning-ref" }
+cursive_core = { path = "vendor/cursive-core" }

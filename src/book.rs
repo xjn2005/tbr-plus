@@ -7,7 +7,7 @@ use std::io::Read;
 use std::ops::Range;
 use std::slice::Iter;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use fancy_regex::Regex;
 use indexmap::IndexSet;
 
@@ -18,7 +18,7 @@ use crate::book::txt::TxtLoader;
 #[cfg(feature = "gui")]
 use crate::color::{Color32, Colors};
 use crate::common::TraceInfo;
-use crate::common::{byte_index_for_char, char_index_for_byte, Position};
+use crate::common::{Position, byte_index_for_char, char_index_for_byte};
 use crate::config::{BookLoadingInfo, ReadingInfo};
 use crate::container::BookContent;
 use crate::container::BookContent::{Buf, File, Path};
@@ -106,7 +106,7 @@ impl Display for SearchError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             SearchError::Canceled => f.write_str("Find canceled")?,
-            SearchError::Custom(msg) => f.write_str(&msg)?,
+            SearchError::Custom(msg) => f.write_str(msg)?,
         }
         Ok(())
     }
@@ -145,7 +145,7 @@ impl Line {
     }
 
     pub fn concat(&mut self, str: &str) {
-        if str.len() == 0 {
+        if str.is_empty() {
             return;
         }
         let mut ignore_whitespace = true;
@@ -202,10 +202,7 @@ impl Line {
 
     #[inline]
     pub fn char_at(&self, index: usize) -> Option<char> {
-        match self.chars.get(index) {
-            Some(ch) => Some(*ch),
-            None => None,
-        }
+        self.chars.get(index).copied()
     }
 
     #[inline]
@@ -238,7 +235,7 @@ impl Line {
         let mut start = 0;
         let mut slice = text.as_str();
         let chars = self.chars.len();
-        while let Some(range) = find_pattern(slice, chars, &regex, start, false) {
+        while let Some(range) = find_pattern(slice, chars, regex, start, false) {
             start = range.end;
             f(&text, range)?;
             if let Some(byte_index) = byte_index_for_char(&text, chars, start) {
@@ -294,10 +291,10 @@ impl Line {
     #[allow(unused)]
     pub fn image_at(&self, char_offset: usize) -> Option<&ImageStyle> {
         for style in self.styles.iter().rev() {
-            if let (TextStyle::Image(image), range) = style {
-                if range.contains(&char_offset) {
-                    return Some(image);
-                }
+            if let (TextStyle::Image(image), range) = style
+                && range.contains(&char_offset)
+            {
+                return Some(image);
             }
         }
         None
@@ -311,10 +308,8 @@ impl Line {
     {
         for (style, range) in self.styles.iter().rev() {
             match style {
-                TextStyle::Border(lines, color) => {
-                    border(&range, lines.clone(), color.clone(), param)
-                }
-                TextStyle::Decoration(d) => decoration(&range, d, param),
+                TextStyle::Border(lines, color) => border(range, *lines, color.clone(), param),
+                TextStyle::Decoration(d) => decoration(range, d, param),
                 TextStyle::Link(_)
                 | TextStyle::FontSize { .. }
                 | TextStyle::FontWeight(..)
@@ -353,17 +348,15 @@ impl Line {
                         char_style.font_scale.update(size.scale(), size.relative())
                     }
                     TextStyle::FontWeight(weight) => char_style.font_weight.update(weight),
-                    TextStyle::FontFamily(families) => {
-                        char_style.font_family = Some(families.clone())
-                    }
-                    TextStyle::Image(image) => char_style.image = Some(&image),
+                    TextStyle::FontFamily(families) => char_style.font_family = Some(*families),
+                    TextStyle::Image(image) => char_style.image = Some(image),
                     TextStyle::Link(_) => {
-                        char_style.link = Some((index, &range));
+                        char_style.link = Some((index, range));
                         if new_color.is_none() {
                             new_color = Some(colors.link.clone());
                         }
                     }
-                    TextStyle::Border { .. } => char_style.border = Some((&range, style.clone())),
+                    TextStyle::Border { .. } => char_style.border = Some((range, style.clone())),
                     TextStyle::Color(color) => {
                         if custom_color {
                             new_color = Some(color.clone())
@@ -446,7 +439,7 @@ impl PartialEq for Line {
                 break;
             }
         }
-        return true;
+        true
     }
 }
 
@@ -497,7 +490,7 @@ pub trait Book {
 
     fn goto_chapter(&mut self, chapter_index: usize) -> Result<Option<usize>> {
         if chapter_index >= self.chapter_count() {
-            return Ok(None);
+            Ok(None)
         } else {
             Ok(Some(chapter_index))
         }
@@ -609,7 +602,7 @@ pub trait Book {
         let offset_to = cmp::min(last_text.len(), offset_to);
         push_chars(last_text, offset_from..offset_to, &mut selected_text);
 
-        if selected_text.len() == 0 {
+        if selected_text.is_empty() {
             None
         } else {
             let highlight = HighlightInfo {
@@ -769,8 +762,8 @@ fn find_pattern(
     } else {
         regex.find_from_pos(line, 0).ok()??
     };
-    let match_start = char_index_for_byte(&line, chars, m.start()).unwrap();
-    let match_end = char_index_for_byte(&line, chars, m.end()).unwrap();
+    let match_start = char_index_for_byte(line, chars, m.start()).unwrap();
+    let match_end = char_index_for_byte(line, chars, m.end()).unwrap();
     Some(Range {
         start: match_start + start_offset,
         end: match_end + start_offset,

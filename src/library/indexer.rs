@@ -4,7 +4,7 @@ use anyhow::Result;
 
 use crate::annotations::{Annotation, BookId};
 use crate::config::BookLoadingInfo;
-use crate::container::{load_book, load_container, ContainerManager};
+use crate::container::{ContainerManager, load_book, load_container};
 
 use super::LibraryDocument;
 

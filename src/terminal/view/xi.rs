@@ -318,14 +318,14 @@ impl Xi {
             fill_print_line(&mut print_line, width - x);
             context.print_lines.push(print_line);
         }
-        return wrapped_breaks;
+        wrapped_breaks
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::book::{Book, Line};
-    use crate::terminal::view::xi::{fill_print_line, Xi};
+    use crate::terminal::view::xi::{Xi, fill_print_line};
     use crate::terminal::view::{DrawChar, DrawCharMode, Render, RenderContext};
 
     const TEST_WIDTH: usize = 80;
@@ -383,7 +383,7 @@ mod tests {
         let book: Box<dyn Book> = Box::new(DummyBook { lines });
         let mut xi = Xi {};
         // first page draw result verify
-        let next = xi.redraw(book.as_ref(), &book.lines(), 0, 0, &None, &mut context);
+        let next = xi.redraw(book.as_ref(), book.lines(), 0, 0, &None, &mut context);
 
         assert!(next.is_some());
         let next = next.unwrap();
@@ -456,7 +456,7 @@ mod tests {
         // 2nd page draw result verify
         let next = xi.redraw(
             book.as_ref(),
-            &book.lines(),
+            book.lines(),
             next.line,
             next.offset,
             &None,
@@ -542,7 +542,7 @@ mod tests {
         // 3rd page draw result verify
         let next = xi.redraw(
             book.as_ref(),
-            &book.lines(),
+            book.lines(),
             next.line,
             next.offset,
             &None,

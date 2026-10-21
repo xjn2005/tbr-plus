@@ -4,7 +4,7 @@ extern crate core;
 #[macro_use]
 extern crate markup5ever;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::Parser;
 use dirs::{cache_dir, config_dir};
 use rust_embed::RustEmbed;
@@ -97,10 +97,9 @@ fn main() -> Result<()> {
         Some(x) => x.join(package_name!()),
     };
     let config_file = config_dir.join("tbr.toml");
-    let filename = cli.filename.map_or_else(
-        || env::var(TBR_BOOK_ENV_KEY).map_or(None, |name| Some(name)),
-        |name| Some(name),
-    );
+    let filename = cli
+        .filename
+        .map_or_else(|| env::var(TBR_BOOK_ENV_KEY).ok(), Some);
     #[allow(unused_mut)]
     let (mut current, mut configuration) =
         load_config(filename, config_file, &config_dir, &cache_dir)?;

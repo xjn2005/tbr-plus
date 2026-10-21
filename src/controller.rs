@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use fancy_regex::Regex;
 use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
@@ -7,7 +7,7 @@ use std::ops::Range;
 use crate::book::{Book, Line};
 use crate::common::TraceInfo;
 use crate::config::{BookLoadingInfo, ReadingInfo};
-use crate::container::{load_book, load_container, Container};
+use crate::container::{Container, load_book, load_container};
 use crate::{ContainerManager, Position};
 
 const TRACE_SIZE: usize = 100;
@@ -386,7 +386,7 @@ impl<C, R: Render<C> + ?Sized> Controller<C, R> {
             } else {
                 let new_line = line - 1;
                 let text = &lines[new_line];
-                if text.len() == 0 {
+                if text.is_empty() {
                     self.redraw_at(new_line, 0, context);
                     return Ok(());
                 }
@@ -406,7 +406,7 @@ impl<C, R: Render<C> + ?Sized> Controller<C, R> {
             let line = reading.line;
 
             let text = &lines[line];
-            if text.len() == 0 {
+            if text.is_empty() {
                 let new_line = line + 1;
                 if line < lines.len() {
                     self.redraw_at(new_line, 0, context);
@@ -828,11 +828,11 @@ impl<C, R: Render<C> + ?Sized> Controller<C, R> {
 
     pub fn goto_link(&mut self, line: usize, link_index: usize, context: &mut C) -> Result<()> {
         if let Some(pos) = self.book.link_position(line, link_index) {
-            if pos.chapter != self.book.current_chapter() {
-                if let Some(new_chapter) = self.book.goto_chapter(pos.chapter)? {
-                    assert_eq!(new_chapter, pos.chapter);
-                    self.reading.chapter = new_chapter;
-                }
+            if pos.chapter != self.book.current_chapter()
+                && let Some(new_chapter) = self.book.goto_chapter(pos.chapter)?
+            {
+                assert_eq!(new_chapter, pos.chapter);
+                self.reading.chapter = new_chapter;
             }
             self.reading.line = pos.line;
             self.reading.position = pos.offset;
@@ -864,13 +864,8 @@ impl<C, R: Render<C> + ?Sized> Controller<C, R> {
             {
                 match &self.next {
                     Some(next) => {
-                        if (highlight_line == next.line && highlight_start < next.offset)
+                        (highlight_line == next.line && highlight_start < next.offset)
                             || (highlight_line < next.line)
-                        {
-                            true
-                        } else {
-                            false
-                        }
                     }
                     None => true,
                 }

@@ -6,11 +6,11 @@ use gtk4::prelude::{
     BoxExt, ButtonExt, EditableExt, EntryExt, GtkWindowExt, IsA, TextBufferExt, WidgetExt,
 };
 use gtk4::{
-    glib, Align, Button, Entry, EventControllerKey, Orientation, ScrolledWindow, Separator,
-    TextBuffer, TextView, Widget, Window,
+    Align, Button, Entry, EventControllerKey, Orientation, ScrolledWindow, Separator, TextBuffer,
+    TextView, Widget, Window, glib,
 };
 
-use crate::gui::{alert, GuiContext, MODIFIER_NONE};
+use crate::gui::{GuiContext, MODIFIER_NONE, alert};
 use crate::html_parser;
 
 pub(crate) fn custom_styles<F>(

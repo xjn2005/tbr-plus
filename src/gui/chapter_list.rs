@@ -1,11 +1,11 @@
-use crate::gui::{load_button_image, ChapterListSyncMode, GuiController, IconMap};
+use crate::gui::{ChapterListSyncMode, GuiController, IconMap, load_button_image};
 use crate::i18n::I18n;
 use gtk4::graphene::Point;
 use gtk4::pango::EllipsizeMode;
 use gtk4::prelude::{AdjustmentExt, BoxExt, EditableExt, ListBoxRowExt, WidgetExt};
 use gtk4::{
-    gdk, Align, GestureClick, Label, ListBox, ListBoxRow, Orientation, PolicyType, SearchEntry,
-    SelectionMode,
+    Align, GestureClick, Label, ListBox, ListBoxRow, Orientation, PolicyType, SearchEntry,
+    SelectionMode, gdk,
 };
 use std::cell::{Cell, Ref, RefCell};
 use std::rc::Rc;
@@ -145,18 +145,18 @@ impl ChapterList {
             if let Some(row) = row {
                 let entries = chapter_list.inner.rows.borrow();
                 let row_index = row.index();
-                if row_index >= 0 {
-                    if let Some(entry) = entries.get(row_index as usize) {
-                        let index = entry.index;
-                        let is_book = entry.book;
-                        drop(entries);
-                        if is_book {
-                            chapter_list.collapse(!chapter_list.inner.collapse.get());
-                            item_clicked(true, index);
-                            chapter_list.sync_chapter_list(ChapterListSyncMode::Reload);
-                        } else {
-                            item_clicked(false, index);
-                        }
+                if row_index >= 0
+                    && let Some(entry) = entries.get(row_index as usize)
+                {
+                    let index = entry.index;
+                    let is_book = entry.book;
+                    drop(entries);
+                    if is_book {
+                        chapter_list.collapse(!chapter_list.inner.collapse.get());
+                        item_clicked(true, index);
+                        chapter_list.sync_chapter_list(ChapterListSyncMode::Reload);
+                    } else {
+                        item_clicked(false, index);
                     }
                 }
             }
@@ -191,15 +191,12 @@ impl ChapterList {
     #[inline]
     pub fn scroll_to_current(&self) {
         let list = &self.inner.list;
-        if let Some(row) = list.selected_row() {
-            if let Some(point) = row.compute_point(list, &Point::new(0., 0.)) {
-                if let Some(adj) = list.adjustment() {
-                    let (_, height) = row.preferred_size();
-                    adj.set_value(
-                        point.y() as f64 - (adj.page_size() - height.height() as f64) / 2.,
-                    );
-                }
-            }
+        if let Some(row) = list.selected_row()
+            && let Some(point) = row.compute_point(list, &Point::new(0., 0.))
+            && let Some(adj) = list.adjustment()
+        {
+            let (_, height) = row.preferred_size();
+            adj.set_value(point.y() as f64 - (adj.page_size() - height.height() as f64) / 2.);
         }
     }
 
@@ -227,26 +224,26 @@ impl ChapterList {
             let toc_index = controller.toc_index();
             if let Some(row) = list.selected_row() {
                 let index = row.index();
-                if index >= 0 {
-                    if let Some(entry) = entries.get(index as usize) {
-                        if entry.index == toc_index {
-                            return;
-                        }
-                    }
+                if index >= 0
+                    && let Some(entry) = entries.get(index as usize)
+                    && entry.index == toc_index
+                {
+                    return;
                 }
             }
 
             for i in 0..entries.len() {
                 let entry = &entries[i];
-                if !entry.book && entry.index == toc_index {
-                    if let Some(row) = list.row_at_index(i as i32) {
-                        list.select_row(Some(&row));
-                    }
+                if !entry.book
+                    && entry.index == toc_index
+                    && let Some(row) = list.row_at_index(i as i32)
+                {
+                    list.select_row(Some(&row));
                 }
             }
         }
         self.block_reactive(true);
-        do_sync(sync_mode, &self, &self.ctrl());
+        do_sync(sync_mode, self, &self.ctrl());
         self.scroll_to_current();
         self.block_reactive(false);
     }
@@ -298,29 +295,26 @@ pub fn load_entries(chapter_list: &ChapterList) {
             }
         }
     } else {
-        match controller.book.toc_iterator() {
-            Some(toc) => {
-                for info in toc {
-                    let reading = info.index == current_toc;
-                    if reading {
-                        selected_index = Some(entries.len());
-                    }
-                    entries.push(ChapterListEntry::new(
-                        info.title,
-                        false,
-                        info.index,
-                        info.level - 1,
-                        reading,
-                    ));
+        if let Some(toc) = controller.book.toc_iterator() {
+            for info in toc {
+                let reading = info.index == current_toc;
+                if reading {
+                    selected_index = Some(entries.len());
                 }
-                toc_level = 0;
+                entries.push(ChapterListEntry::new(
+                    info.title,
+                    false,
+                    info.index,
+                    info.level - 1,
+                    reading,
+                ));
             }
-            _ => {}
+            toc_level = 0;
         }
     }
     let mut rows = vec![];
     for entry in entries.iter() {
-        let row = create_list_row(&entry, toc_level, icons);
+        let row = create_list_row(entry, toc_level, icons);
         rows.push(row);
     }
     drop(entries);
@@ -328,29 +322,28 @@ pub fn load_entries(chapter_list: &ChapterList) {
     for row in rows {
         list.append(&row);
     }
-    if let Some(selected_index) = selected_index {
-        if let Some(row) = list.row_at_index(selected_index as i32) {
-            list.select_row(Some(&row));
-        }
+    if let Some(selected_index) = selected_index
+        && let Some(row) = list.row_at_index(selected_index as i32)
+    {
+        list.select_row(Some(&row));
     }
-    if let Some(current_book_idx) = current_book_idx {
-        if let Some(row) = list.row_at_index(current_book_idx as i32) {
-            if current_book_collapsable {
-                row.set_selectable(false);
-                let click = GestureClick::builder().button(gdk::BUTTON_PRIMARY).build();
-                let chapter_list = chapter_list.clone();
-                click.connect_released(move |_, _, _, _| {
-                    let collapse = !chapter_list.inner.collapse.get();
-                    if collapse {
-                        chapter_list.collapse(true);
-                    } else {
-                        chapter_list.collapse(false);
-                        chapter_list.sync_chapter_list(ChapterListSyncMode::NoReload);
-                    }
-                });
-                row.add_controller(click);
+    if let Some(current_book_idx) = current_book_idx
+        && let Some(row) = list.row_at_index(current_book_idx as i32)
+        && current_book_collapsable
+    {
+        row.set_selectable(false);
+        let click = GestureClick::builder().button(gdk::BUTTON_PRIMARY).build();
+        let chapter_list = chapter_list.clone();
+        click.connect_released(move |_, _, _, _| {
+            let collapse = !chapter_list.inner.collapse.get();
+            if collapse {
+                chapter_list.collapse(true);
+            } else {
+                chapter_list.collapse(false);
+                chapter_list.sync_chapter_list(ChapterListSyncMode::NoReload);
             }
-        }
+        });
+        row.add_controller(click);
     }
 }
 

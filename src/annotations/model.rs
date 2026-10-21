@@ -10,6 +10,13 @@ use super::anchor::Anchor;
 pub struct BookId([u8; 32]);
 
 impl BookId {
+    #[cfg(test)]
+    pub fn from_content(content: &[u8], title: &str, author: Option<&str>) -> Self {
+        let mut hasher = Sha256::new();
+        hasher.update(content);
+        Self::finish_hash(hasher, title, author)
+    }
+
     pub fn from_file(path: &Path, title: &str, author: Option<&str>) -> io::Result<Self> {
         let mut file = File::open(path)?;
         let mut hasher = Sha256::new();

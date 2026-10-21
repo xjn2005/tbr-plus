@@ -7,8 +7,8 @@ use gtk4::prelude::{EventControllerExt, GestureDragExt, GestureExt, ObjectExt, W
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{Accessible, Buildable, ConstraintTarget, Scrollable};
 use gtk4::{
-    gdk, glib, CssProvider, EventControllerMotion, EventControllerScroll,
-    EventControllerScrollFlags, GestureClick, GestureDrag,
+    CssProvider, EventControllerMotion, EventControllerScroll, EventControllerScrollFlags,
+    GestureClick, GestureDrag, gdk, glib,
 };
 
 use crate::book::{Book, Line};
@@ -16,10 +16,10 @@ use crate::color::Colors;
 use crate::common::Position;
 use crate::config::ReadingInfo;
 use crate::controller::{HighlightInfo, Render};
-use crate::gui::font::UserFonts;
-use crate::gui::math::{pos2, Pos2};
-use crate::gui::render::RenderContext;
 use crate::gui::HtmlFonts;
+use crate::gui::font::UserFonts;
+use crate::gui::math::{Pos2, pos2};
+use crate::gui::render::RenderContext;
 
 const MIN_TEXT_SELECT_DISTANCE: f32 = 4.0;
 
@@ -168,47 +168,46 @@ impl GuiView {
         let drag_gesture = GestureDrag::builder().button(gdk::BUTTON_PRIMARY).build();
         let view = self.clone();
         drag_gesture.connect_update(move |drag, seq| {
-            if let Some(bp) = drag.start_point() {
-                if let Some(ep) = drag.point(seq) {
-                    drag.set_state(gtk4::EventSequenceState::Claimed);
-                    let from = pos2(bp.0 as f32, bp.1 as f32);
-                    let to = pos2(ep.0 as f32, ep.1 as f32);
-                    if let Some((from, to)) = view.calc_selection(from, to) {
-                        view.emit_by_name::<()>(
-                            GuiView::SELECTING_TEXT_SIGNAL,
-                            &[
-                                &(from.line as u64),
-                                &(from.offset as u64),
-                                &(to.line as u64),
-                                &(to.offset as u64),
-                            ],
-                        );
-                    } else {
-                        view.emit_by_name::<()>(GuiView::CLEAR_SELECTION_SIGNAL, &[]);
-                    }
+            if let Some(bp) = drag.start_point()
+                && let Some(ep) = drag.point(seq)
+            {
+                drag.set_state(gtk4::EventSequenceState::Claimed);
+                let from = pos2(bp.0 as f32, bp.1 as f32);
+                let to = pos2(ep.0 as f32, ep.1 as f32);
+                if let Some((from, to)) = view.calc_selection(from, to) {
+                    view.emit_by_name::<()>(
+                        GuiView::SELECTING_TEXT_SIGNAL,
+                        &[
+                            &(from.line as u64),
+                            &(from.offset as u64),
+                            &(to.line as u64),
+                            &(to.offset as u64),
+                        ],
+                    );
+                } else {
+                    view.emit_by_name::<()>(GuiView::CLEAR_SELECTION_SIGNAL, &[]);
                 }
             }
         });
         let view = self.clone();
         drag_gesture.connect_end(move |drag, seq| {
             view.grab_focus();
-            if let Some(bp) = drag.start_point() {
-                if let Some(ep) = drag.point(seq) {
-                    if bp != ep {
-                        let from = pos2(bp.0 as f32, bp.1 as f32);
-                        let to = pos2(ep.0 as f32, ep.1 as f32);
-                        if let Some((from, to)) = view.calc_selection(from, to) {
-                            view.emit_by_name::<()>(
-                                GuiView::TEXT_SELECTED_SIGNAL,
-                                &[
-                                    &(from.line as u64),
-                                    &(from.offset as u64),
-                                    &(to.line as u64),
-                                    &(to.offset as u64),
-                                ],
-                            );
-                        }
-                    }
+            if let Some(bp) = drag.start_point()
+                && let Some(ep) = drag.point(seq)
+                && bp != ep
+            {
+                let from = pos2(bp.0 as f32, bp.1 as f32);
+                let to = pos2(ep.0 as f32, ep.1 as f32);
+                if let Some((from, to)) = view.calc_selection(from, to) {
+                    view.emit_by_name::<()>(
+                        GuiView::TEXT_SELECTED_SIGNAL,
+                        &[
+                            &(from.line as u64),
+                            &(from.offset as u64),
+                            &(to.line as u64),
+                            &(to.offset as u64),
+                        ],
+                    );
                 }
             }
         });
@@ -361,7 +360,7 @@ mod imp {
     use gtk4::prelude::*;
     use gtk4::subclass::drawing_area::DrawingAreaImpl;
     use gtk4::subclass::prelude::*;
-    use gtk4::{glib, graphene, Adjustment, Scrollable, ScrollablePolicy, Snapshot};
+    use gtk4::{Adjustment, Scrollable, ScrollablePolicy, Snapshot, glib, graphene};
     use indexmap::IndexSet;
 
     use crate::book::{Book, Line};
@@ -371,10 +370,10 @@ mod imp {
     use crate::gui::font::{HtmlFonts, UserFonts};
     use crate::gui::math::{Pos2, Rect};
     use crate::gui::render::{
-        create_render, BlockBackgroundEntry, GuiRender, PointerPosition, RenderCell, RenderChar,
-        RenderContext, RenderLine, ScrollRedrawMethod, ScrolledDrawData, TextDecoration,
+        BlockBackgroundEntry, GuiRender, PointerPosition, RenderCell, RenderChar, RenderContext,
+        RenderLine, ScrollRedrawMethod, ScrolledDrawData, TextDecoration, create_render,
     };
-    use crate::gui::view::{ClickTarget, ScrollPosition, MIN_TEXT_SELECT_DISTANCE};
+    use crate::gui::view::{ClickTarget, MIN_TEXT_SELECT_DISTANCE, ScrollPosition};
 
     #[derive(Properties)]
     #[properties(wrapper_type = super::GuiView)]
@@ -581,7 +580,7 @@ mod imp {
             let adjustment = adjustment
                 .as_ref()
                 .expect("No adjustment for scrollable book view");
-            f(&adjustment)
+            f(adjustment)
         }
 
         #[inline]

@@ -62,10 +62,10 @@ impl AnnotationPanel {
             let annotations = annotations.clone();
             let jump_callback = jump_callback.clone();
             list.connect_row_activated(move |_, row| {
-                if let Some(annotation) = annotations.borrow().get(row.index() as usize) {
-                    if let Some(callback) = &*jump_callback.borrow() {
-                        callback(annotation.clone());
-                    }
+                if let Some(annotation) = annotations.borrow().get(row.index() as usize)
+                    && let Some(callback) = &*jump_callback.borrow()
+                {
+                    callback(annotation.clone());
                 }
             });
         }

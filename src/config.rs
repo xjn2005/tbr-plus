@@ -75,11 +75,7 @@ impl Listable for ReadingInfo {
 
     fn id(&self) -> usize {
         let rowid = self.row_id;
-        if rowid < 0 {
-            0
-        } else {
-            rowid as usize
-        }
+        if rowid < 0 { 0 } else { rowid as usize }
     }
 }
 
@@ -358,7 +354,7 @@ impl Configuration {
         current: Option<&String>,
         filter_pattern: Option<&String>,
     ) -> Result<Vec<ReadingInfo>> {
-        Ok(query(&self.history_db, 20, current, filter_pattern)?)
+        query(&self.history_db, 20, current, filter_pattern)
     }
 
     pub fn reading<'a>(&self, filename: &'a str) -> Result<BookLoadingInfo<'a>> {
@@ -541,10 +537,10 @@ pub(super) fn load_config(
             None
         };
         let history_db = load_history_db(&raw_config.history)?;
-        if current.is_none() {
-            if let Some(latest_reading) = query(&history_db, 1, None, None)?.pop() {
-                current = Some(latest_reading.filename);
-            }
+        if current.is_none()
+            && let Some(latest_reading) = query(&history_db, 1, None, None)?.pop()
+        {
+            current = Some(latest_reading.filename);
         }
         let orig = raw_config.clone();
         #[cfg(feature = "gui")]
@@ -568,7 +564,7 @@ pub(super) fn load_config(
     } else {
         fs::create_dir_all(config_dir)?;
         fs::create_dir_all(cache_dir)?;
-        let current = filename.map_or(None, |filename| file_path(&filename));
+        let current = filename.and_then(|filename| file_path(&filename));
         let history = config_dir.join("history.sqlite");
         let history_db = load_history_db(&history)?;
         let orig = RawConfig {
@@ -595,7 +591,7 @@ pub(super) fn load_config(
             },
         )
     };
-    return Ok((current, configuration));
+    Ok((current, configuration))
 }
 
 fn file_path(filename: &str) -> Option<String> {
@@ -718,15 +714,15 @@ order by ts desc
             continue;
         }
         let filename = &info.filename;
-        if let Some(exclude) = exclude {
-            if exclude == filename {
-                continue;
-            }
+        if let Some(exclude) = exclude
+            && exclude == filename
+        {
+            continue;
         }
-        if let Some(pattern) = filter_pattern {
-            if match_filename(&filename, pattern).is_none() {
-                continue;
-            }
+        if let Some(pattern) = filter_pattern
+            && match_filename(filename, pattern).is_none()
+        {
+            continue;
         }
         list.push(info);
         if list.len() >= limit {
@@ -738,7 +734,7 @@ order by ts desc
 
 pub fn match_filename(filename: &str, pattern: &str) -> Option<Vec<usize>> {
     let mut vec = vec![];
-    let mut name_iter = filename.chars().into_iter();
+    let mut name_iter = filename.chars();
     let mut fi = 0;
     for pc in pattern.chars() {
         let pc = pc.to_ascii_lowercase();

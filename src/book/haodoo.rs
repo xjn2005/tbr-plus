@@ -1,7 +1,7 @@
 use std::borrow::BorrowMut;
 use std::io::{Cursor, Read, Seek, SeekFrom};
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use encoding_rs::Encoding;
 
 use crate::book::{Book, Line, Loader, LoadingChapter, TocInfo};
@@ -10,7 +10,7 @@ use crate::common::{decode_text, detect_charset, txt_lines};
 use crate::config::{BookLoadingInfo, ReadingInfo};
 use crate::list::ListIterator;
 
-///
+//
 // http://www.haodoo.net/?M=hd&P=mPDB22
 //
 //  機子及作業系統越來越多，我不可能逐一撰寫閱讀軟體，因而特將uPDB及PDB檔詳細規格公布如下，方便有興趣、有時間、能寫程式的讀友，為新機種撰寫閱讀軟體。唯一的請求是：您撰寫閱讀軟體的目的不是圖利，而是造福讀友，讓讀友們可免費使用。謝謝。
@@ -155,10 +155,10 @@ fn parse_header<R: Read + Seek>(mut reader: R) -> Result<HaodooBook<R>> {
     let book_id = String::from_utf8_lossy(&header[ID_OFFSET..ID_OFFSET + ID_LENGTH]).to_string();
     let book_type = match book_id.as_str() {
         PDB_ID => PDBType::PDB {
-            encode: &encoding_rs::BIG5,
+            encode: encoding_rs::BIG5,
         },
         UPDB_ID => PDBType::UPDB {
-            encode: &encoding_rs::UTF_16LE,
+            encode: encoding_rs::UTF_16LE,
         },
         PALMDOC_ID => PDBType::PalmDoc,
         _ => return Err(anyhow!("Invalid book id: {}", book_id)),
@@ -355,7 +355,7 @@ impl<R: Read + Seek> HaodooBook<R> {
                 } else {
                     0
                 };
-                let text = encode.decode(&mut encrypt_record[offset..]).0.to_string();
+                let text = encode.decode(&encrypt_record[offset..]).0.to_string();
                 let lines = txt_lines(&text);
                 if let Some(chapter) = self.chapters.get_mut(chapter_index) {
                     chapter.lines = Some(lines);
@@ -400,14 +400,14 @@ impl<R: Read + Seek> HaodooBook<R> {
         let mut record = self.read_record(chapter_index + 1)?;
         let text = match self.book_type {
             PDBType::PDB { encode, .. } => {
-                if let Some(encrypt_chapter_index) = self.encrypt_chapter_index {
-                    if encrypt_chapter_index <= chapter_index {
-                        decrypt_pdb(&mut record);
-                    }
+                if let Some(encrypt_chapter_index) = self.encrypt_chapter_index
+                    && encrypt_chapter_index <= chapter_index
+                {
+                    decrypt_pdb(&mut record);
                 }
-                encode.decode(&mut record)
+                encode.decode(&record)
             }
-            PDBType::UPDB { encode, .. } => encode.decode(&mut record),
+            PDBType::UPDB { encode, .. } => encode.decode(&record),
             PDBType::PalmDoc => {
                 panic!("no way")
             }

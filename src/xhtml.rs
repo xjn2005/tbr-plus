@@ -145,7 +145,7 @@ pub fn xhtml_to_html(xhtml: &str) -> Result<String> {
             Event::Start(e) => {
                 if found {
                     write_start(&e, &mut html)?;
-                } else if e.name().as_ref() == b"html" {
+                } else if e.name().as_ref() == "html" {
                     found = true;
                     write_start(&e, &mut html)?;
                 }
@@ -153,7 +153,7 @@ pub fn xhtml_to_html(xhtml: &str) -> Result<String> {
             Event::End(e) => {
                 if found {
                     write_end(e.name().as_ref(), &mut html)?;
-                } else if e.name().as_ref() == b"html" {
+                } else if e.name().as_ref() == "html" {
                     html.push_str("</html>");
                     break;
                 }
@@ -166,10 +166,9 @@ pub fn xhtml_to_html(xhtml: &str) -> Result<String> {
             }
             Event::Text(e) => {
                 if found {
-                    let cow = e.into_inner();
-                    let str = std::str::from_utf8(cow.as_ref())?;
-                    if str.len() > 0 {
-                        html.push_str(&str);
+                    let text = e.into_inner();
+                    if !text.is_empty() {
+                        html.push_str(text.as_ref());
                     }
                 }
             }
@@ -186,27 +185,26 @@ pub fn xhtml_to_html(xhtml: &str) -> Result<String> {
 }
 
 #[inline]
-fn is_void_element(name: &[u8]) -> bool {
-    const VOID_ELEMENTS: [&[u8]; 16] = [
-        b"area", b"base", b"br", b"col", b"command", b"embed", b"hr", b"img", b"input", b"keygen",
-        b"link", b"meta", b"param", b"source", b"track", b"wbr",
+fn is_void_element(name: &str) -> bool {
+    const VOID_ELEMENTS: [&str; 16] = [
+        "area", "base", "br", "col", "command", "embed", "hr", "img", "input", "keygen", "link",
+        "meta", "param", "source", "track", "wbr",
     ];
     VOID_ELEMENTS.binary_search(&name).is_ok()
 }
 
 fn write_start(start: &BytesStart, html: &mut String) -> Result<()> {
-    let tag_name = std::str::from_utf8(start.as_ref())?;
     html.push('<');
-    html.push_str(&tag_name);
+    html.push_str(start.name().as_ref());
     write_attrs(start, html)?;
     html.push('>');
     Ok(())
 }
 
-fn write_end(name: &[u8], html: &mut String) -> Result<()> {
+fn write_end(name: &str, html: &mut String) -> Result<()> {
     if !is_void_element(name) {
         html.push_str("</");
-        html.push_str(std::str::from_utf8(name)?);
+        html.push_str(name);
         html.push('>');
     }
     Ok(())
@@ -221,16 +219,26 @@ fn write_attrs(start: &BytesStart, html: &mut String) -> Result<()> {
         // concat name
         let name = attr.key;
         if let Some(prefix) = name.prefix() {
-            let prefix = std::str::from_utf8(prefix.as_ref())?;
-            html.push_str(&prefix);
+            html.push_str(prefix.as_ref());
             html.push(':');
         }
-        html.push_str(std::str::from_utf8(name.local_name().as_ref())?);
+        html.push_str(name.local_name().as_ref());
 
         // concat value
         html.push_str(r#"=""#);
-        html.push_str(std::str::from_utf8(&attr.value)?);
+        html.push_str(attr.value.as_ref());
         html.push('"');
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::xhtml_to_html;
+
+    #[test]
+    fn converts_xhtml_tags_and_attributes_to_html() {
+        let html = xhtml_to_html(r#"<html><body><br class="line"/></body></html>"#).unwrap();
+        assert_eq!(html, r#"<html><body><br class="line"></body></html>"#);
+    }
 }

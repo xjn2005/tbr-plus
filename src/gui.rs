@@ -9,7 +9,7 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use gtk4::gdk::{Display, DragAction, Key, ModifierType, Rectangle, Texture};
 use gtk4::gdk_pixbuf::Pixbuf;
 use gtk4::gio::{
@@ -18,7 +18,7 @@ use gtk4::gio::{
 };
 use gtk4::glib;
 use gtk4::glib::prelude::{ObjectExt, StaticType, ToVariant};
-use gtk4::glib::{closure_local, format_size, Bytes, ExitCode, Variant};
+use gtk4::glib::{Bytes, ExitCode, Variant, closure_local, format_size};
 use gtk4::graphene::Point;
 use gtk4::prelude::{
     ActionExt, ActionMapExt, ApplicationExt, ApplicationExtManual, BoxExt, ButtonExt, DisplayExt,
@@ -26,24 +26,24 @@ use gtk4::prelude::{
     NativeExt, OrientableExt, PopoverExt, SeatExt, SurfaceExt, ToggleButtonExt, WidgetExt,
 };
 use gtk4::{
-    gdk, AlertDialog, Align, Application, ApplicationWindow, Button, CssProvider, DropTarget,
+    AlertDialog, Align, Application, ApplicationWindow, Button, CssProvider, DropTarget,
     EventControllerKey, FileDialog, FileFilter, GestureClick, HeaderBar, Image, Label, Orientation,
     Paned, Popover, PopoverMenu, PositionType, SearchEntry, Separator, Stack, ToggleButton, Widget,
-    Window,
+    Window, gdk,
 };
 use pangocairo::glib::Propagation;
 use pangocairo::pango::EllipsizeMode;
 use resvg::{tiny_skia, usvg};
 
 use crate::annotations::{
-    export_book, Anchor, Annotation, AnnotationColor, AnnotationStatus, AnnotationStore, BookId,
-    BookMetadata, NewAnnotation,
+    Anchor, Annotation, AnnotationColor, AnnotationStatus, AnnotationStore, BookId, BookMetadata,
+    NewAnnotation, export_book,
 };
 use crate::book::{Book, Line};
 use crate::color::Color32;
-use crate::common::{txt_lines, Position};
+use crate::common::{Position, txt_lines};
 use crate::config::{BookLoadingInfo, Configuration, ReadingInfo, SidebarPosition};
-use crate::container::{load_book, load_container, BookContent, BookName, Container};
+use crate::container::{BookContent, BookName, Container, load_book, load_container};
 use crate::controller::Controller;
 use crate::gui::chapter_list::ChapterList;
 use crate::gui::dict::{DictionaryBook, DictionaryManager};
@@ -53,10 +53,10 @@ use crate::gui::font::UserFonts;
 use crate::gui::history::HistoryList;
 use crate::gui::render::{PersistentHighlight, RenderContext};
 use crate::gui::settings::Settings;
-use crate::gui::view::{update_mouse_pointer, GuiView};
-use crate::library::{collect_file_documents, LibraryDocument, LibraryIndex, SearchHit};
+use crate::gui::view::{GuiView, update_mouse_pointer};
+use crate::library::{LibraryDocument, LibraryIndex, SearchHit, collect_file_documents};
 use crate::open::Opener;
-use crate::{package_name, Asset, I18n};
+use crate::{Asset, I18n, package_name};
 
 mod annotations;
 mod chapter_list;
@@ -126,7 +126,7 @@ struct LibraryJump {
 }
 
 thread_local! {
-    static PENDING_LIBRARY_JUMP: RefCell<Option<LibraryJump>> = RefCell::new(None);
+    static PENDING_LIBRARY_JUMP: RefCell<Option<LibraryJump>> = const { RefCell::new(None) };
 }
 
 struct ReadmeContainer {
@@ -240,7 +240,7 @@ fn build_ui(
     };
 
     let colors = configuration.curr_theme().clone();
-    let (i18n, icons, fonts, db, css_provider) = if let Some(gc) = gui_contexts.get(0) {
+    let (i18n, icons, fonts, db, css_provider) = if let Some(gc) = gui_contexts.first() {
         (
             gc.i18n.clone(),
             gc.icons.clone(),
@@ -697,12 +697,11 @@ fn setup_view(gc: &GuiContext, view: &GuiView) {
                 to_line,
                 to_offset,
             }));
-            if let Some(selected_text) = gc.ctrl().selected() {
-                if let Some(current_tab) = gc.sidebar_stack.visible_child_name() {
-                    if current_tab == SIDEBAR_DICT_NAME {
-                        gc.dm_mut().set_lookup(selected_text.to_owned());
-                    }
-                }
+            if let Some(selected_text) = gc.ctrl().selected()
+                && let Some(current_tab) = gc.sidebar_stack.visible_child_name()
+                && current_tab == SIDEBAR_DICT_NAME
+            {
+                gc.dm_mut().set_lookup(selected_text.to_owned());
             }
         }
     }
@@ -714,12 +713,12 @@ fn setup_view(gc: &GuiContext, view: &GuiView) {
         offset: usize,
         opener: &mut Opener,
     ) -> Result<()> {
-        if let Some(line) = controller.book.lines().get(line) {
-            if let Some(image) = line.image_at(offset) {
-                let href = image.href();
-                if let Some(image_data) = controller.book.image(href) {
-                    opener.open_image(href, image_data.bytes())?;
-                }
+        if let Some(line) = controller.book.lines().get(line)
+            && let Some(image) = line.image_at(offset)
+        {
+            let href = image.href();
+            if let Some(image_data) = controller.book.image(href) {
+                opener.open_image(href, image_data.bytes())?;
             }
         }
         Ok(())
@@ -732,10 +731,10 @@ fn setup_view(gc: &GuiContext, view: &GuiView) {
         link_index: usize,
         opener: &mut Opener,
     ) -> Result<()> {
-        if let Some(line) = controller.book.lines().get(line) {
-            if let Some(link) = line.link_at(link_index) {
-                opener.open_link(link.target)?;
-            }
+        if let Some(line) = controller.book.lines().get(line)
+            && let Some(link) = line.link_at(link_index)
+        {
+            opener.open_link(link.target)?;
         }
         Ok(())
     }
@@ -883,15 +882,15 @@ fn setup_view(gc: &GuiContext, view: &GuiView) {
             closure_local!(move |_: GuiView, line: u64, offset: u64| {
                 let line_no = line as usize;
                 let controller = gc.ctrl();
-                if let Some(line) = controller.book.lines().get(line_no) {
-                    if let Some((from, to)) = if gc.cfg().gui.select_by_dictionary {
+                if let Some(line) = controller.book.lines().get(line_no)
+                    && let Some((from, to)) = if gc.cfg().gui.select_by_dictionary {
                         gc.db.borrow_mut().lookup_at_offset(line, offset as usize)
                     } else {
                         line.word_at_offset(offset as usize)
-                    } {
-                        drop(controller);
-                        select_text(&gc, line_no, from, line_no, to, true);
                     }
+                {
+                    drop(controller);
+                    select_text(&gc, line_no, from, line_no, to, true);
                 };
             }),
         );
@@ -993,7 +992,7 @@ fn setup_sidebar(
     );
     stack.set_visible_child(&chapter_list_view);
 
-    let sidebar_tab_switch = gtk4::StackSwitcher::builder().stack(&stack).build();
+    let sidebar_tab_switch = gtk4::StackSwitcher::builder().stack(stack).build();
     let sidebar = gtk4::Box::new(Orientation::Vertical, 0);
     sidebar.append(&sidebar_tab_switch);
     sidebar.append(&gc.sidebar_stack);
@@ -1142,14 +1141,13 @@ fn setup_window(
     let window_key_event = EventControllerKey::new();
     {
         let gc = gc.clone();
-        window_key_event.connect_key_released(move |_, key, _, _| match key {
-            Key::Control_L => {
+        window_key_event.connect_key_released(move |_, key, _, _| {
+            if key == Key::Control_L {
                 let view = &gc.ctrl().render;
                 if let Some((x, y)) = mouse_pointer(view.as_ref()) {
-                    update_mouse_pointer(&view, x, y, MODIFIER_NONE);
+                    update_mouse_pointer(view, x, y, MODIFIER_NONE);
                 }
             }
-            _ => {}
         });
     }
     {
@@ -1160,7 +1158,7 @@ fn setup_window(
                 (Key::Control_L, MODIFIER_NONE) => {
                     let view = &gc.ctrl().render;
                     if let Some((x, y)) = mouse_pointer(view.as_ref()) {
-                        update_mouse_pointer(&view, x, y, ModifierType::CONTROL_MASK);
+                        update_mouse_pointer(view, x, y, ModifierType::CONTROL_MASK);
                     }
                     Propagation::Proceed
                 }
@@ -1179,11 +1177,9 @@ fn setup_window(
                     Propagation::Stop
                 }
                 (Key::F, MODIFIER_CTRL_SHIFT) => {
-                    if switch_stack(SIDEBAR_FIND_NAME, &gc, false) {
-                        if find_entry.is_sensitive() {
-                            find_entry.select_region(0, -1);
-                            find_entry.grab_focus();
-                        }
+                    if switch_stack(SIDEBAR_FIND_NAME, &gc, false) && find_entry.is_sensitive() {
+                        find_entry.select_region(0, -1);
+                        find_entry.grab_focus();
                     }
                     Propagation::Stop
                 }
@@ -1278,13 +1274,13 @@ fn setup_window(
             if controller.reading.filename != README_TEXT_FILENAME {
                 let configuration = gc.cfg_mut();
                 if let Err(e) = configuration.save_reading(&mut controller.reading) {
-                    eprintln!("Failed save reading info: {}", e.to_string());
+                    eprintln!("Failed save reading info: {}", e);
                 }
             }
             let mut configuration = gc.cfg_mut();
             configuration.gui.dict_font_size = gc.dm.borrow().font_size();
             if let Err(e) = configuration.save() {
-                eprintln!("Failed save configuration: {}", e.to_string());
+                eprintln!("Failed save configuration: {}", e);
             }
             Propagation::Proceed
         });
@@ -1348,11 +1344,11 @@ fn setup_toolbar(
         let drop_target = DropTarget::new(File::static_type(), DragAction::COPY);
         let gc = gc.clone();
         drop_target.connect_drop(move |_, value, _, _| {
-            if let Ok(file) = value.get::<File>() {
-                if let Some(path) = file.path() {
-                    gc.open_file(&path);
-                    return true;
-                }
+            if let Ok(file) = value.get::<File>()
+                && let Some(path) = file.path()
+            {
+                gc.open_file(&path);
+                return true;
             }
             false
         });
@@ -1473,7 +1469,7 @@ fn setup_main_menu(
         );
     }
 
-    gc.history_list.setup(button, &gc);
+    gc.history_list.setup(button, gc);
     {
         let gc = gc.clone();
         create_action(&section, &action_group, i18n, HISTORY_KEY, move |_, _| {
@@ -1770,7 +1766,7 @@ impl GuiContext {
             .title(package_name!())
             .build();
 
-        let (chapter_list, chapter_list_view) = ChapterList::create(&icons, &i18n, &ctrl);
+        let (chapter_list, chapter_list_view) = ChapterList::create(&icons, &i18n, ctrl);
         let (find_list, find_list_view, find_entry) = FindList::create(&current, &i18n, &icons);
         let annotations = annotations::AnnotationPanel::new();
         let annotations_view = annotations.root().clone();
@@ -1810,7 +1806,7 @@ impl GuiContext {
         }
         file_dialog.set_default_filter(Some(&filter));
 
-        let history_list = HistoryList::new(controller.render.as_ref(), &cfg);
+        let history_list = HistoryList::new(controller.render.as_ref(), cfg);
         let menu_btn = create_button("menu.svg", Some(&i18n.msg("menu")), &icons, false);
 
         let inner = GuiContextInner {
@@ -1959,21 +1955,20 @@ impl GuiContext {
         let gc = self.clone();
         self.file_dialog
             .open(Some(&self.window), None::<&Cancellable>, move |result| {
-                if let Ok(file) = result {
-                    if let Some(path) = file.path() {
-                        gc.open_file(&path);
-                    }
+                if let Ok(file) = result
+                    && let Some(path) = file.path()
+                {
+                    gc.open_file(&path);
                 }
             });
     }
 
     fn open_file(&self, path: &PathBuf) {
-        if let Ok(absolute_path) = path.canonicalize() {
-            if let Some(filepath) = absolute_path.to_str() {
-                if let Some(app) = self.window.application() {
-                    app_open(&app, filepath);
-                }
-            }
+        if let Ok(absolute_path) = path.canonicalize()
+            && let Some(filepath) = absolute_path.to_str()
+            && let Some(app) = self.window.application()
+        {
+            app_open(&app, filepath);
         }
     }
 
@@ -1984,12 +1979,11 @@ impl GuiContext {
 
         let gc = self.clone();
         dialog.select_folder(Some(&self.window), None::<&Cancellable>, move |result| {
-            if let Ok(file) = result {
-                if let Some(path) = file.path() {
-                    if path.is_dir() {
-                        gc.open_file(&path);
-                    }
-                }
+            if let Ok(file) = result
+                && let Some(path) = file.path()
+                && path.is_dir()
+            {
+                gc.open_file(&path);
             }
         });
     }
@@ -2028,10 +2022,10 @@ impl GuiContext {
         container.append(&label(&reading.filename, &mut text));
         container.append(&label(&format_size(meta.len()), &mut text));
         container.append(&Separator::new(Orientation::Horizontal));
-        if let Some(book_names) = controller.container.inner_book_names() {
-            if let Some(name) = book_names.get(reading.inner_book) {
-                container.append(&label(&name.name(), &mut text));
-            }
+        if let Some(book_names) = controller.container.inner_book_names()
+            && let Some(name) = book_names.get(reading.inner_book)
+        {
+            container.append(&label(name.name(), &mut text));
         }
         let status = controller.status();
         if let Some(title) = status.title {
@@ -2598,12 +2592,12 @@ impl GuiContext {
         dialog.set_modal(true);
         let gc = self.clone();
         dialog.save(Some(&self.window), None::<&Cancellable>, move |result| {
-            if let Ok(file) = result {
-                if let Some(path) = file.path() {
-                    match std::fs::write(path, &markdown) {
-                        Ok(()) => gc.message("已导出 Markdown 摘录。"),
-                        Err(err) => gc.error(&err.to_string()),
-                    }
+            if let Ok(file) = result
+                && let Some(path) = file.path()
+            {
+                match std::fs::write(path, &markdown) {
+                    Ok(()) => gc.message("已导出 Markdown 摘录。"),
+                    Err(err) => gc.error(&err.to_string()),
                 }
             }
         });
@@ -2700,10 +2694,10 @@ fn show(
                 alert("Failed start tbr", &err.to_string(), &window);
             }
             _ => {
-                if let Some(window) = app.windows().get(0) {
+                if let Some(window) = app.windows().first() {
                     alert("Failed start tbr", &err.to_string(), window);
                 } else {
-                    eprintln!("Failed start tbr: {}", err.to_string());
+                    eprintln!("Failed start tbr: {}", err);
                 }
             }
         },
@@ -2786,29 +2780,28 @@ pub fn start(
 
     {
         app.connect_open(move |app, files, _| {
-            if !files.is_empty() {
-                if let Some(path) = files[0].path() {
-                    if let Some(path) = path.to_str() {
-                        let jump = take_pending_library_jump(path);
-                        let current = Some(path.to_owned());
-                        show(app, current, &cfg, &gcs);
-                        if let Some(jump) = jump {
-                            let gui_contexts = gcs.borrow();
-                            if let Ok(idx) = get_gc(gui_contexts.as_ref(), &jump.filename) {
-                                gui_contexts[idx].goto_library_position(
-                                    jump.inner_book,
-                                    jump.chapter_index,
-                                    jump.line,
-                                );
-                            }
-                        }
-                        let mut gui_contexts = gcs.borrow_mut();
-                        if let Ok(idx) = get_gc(gui_contexts.as_ref(), README_TEXT_FILENAME) {
-                            let gc = gui_contexts.remove(idx);
-                            drop(gui_contexts);
-                            gc.window.close();
-                        }
+            if !files.is_empty()
+                && let Some(path) = files[0].path()
+                && let Some(path) = path.to_str()
+            {
+                let jump = take_pending_library_jump(path);
+                let current = Some(path.to_owned());
+                show(app, current, &cfg, &gcs);
+                if let Some(jump) = jump {
+                    let gui_contexts = gcs.borrow();
+                    if let Ok(idx) = get_gc(gui_contexts.as_ref(), &jump.filename) {
+                        gui_contexts[idx].goto_library_position(
+                            jump.inner_book,
+                            jump.chapter_index,
+                            jump.line,
+                        );
                     }
+                }
+                let mut gui_contexts = gcs.borrow_mut();
+                if let Ok(idx) = get_gc(gui_contexts.as_ref(), README_TEXT_FILENAME) {
+                    let gc = gui_contexts.remove(idx);
+                    drop(gui_contexts);
+                    gc.window.close();
                 }
             }
         });
@@ -2842,7 +2835,7 @@ fn alert(title: &str, msg: &str, parent: &impl IsA<Window>) {
 
 #[inline]
 fn app_open(app: &Application, filepath: &str) {
-    app.open(&vec![File::for_commandline_arg(filepath)], "");
+    app.open(&[File::for_commandline_arg(filepath)], "");
 }
 
 fn app_open_at(app: &Application, jump: LibraryJump) {

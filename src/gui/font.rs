@@ -1,7 +1,7 @@
 use crate::config::PathConfig;
 use crate::html_parser::{FontWeight, HtmlFontFaceDesc};
 use ab_glyph::{Font, FontRef, FontVec, OutlinedGlyph, Rect};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use fontdb::{Database, Query};
 use indexmap::IndexMap;
 use lightningcss::properties::font::GenericFontFamily;
@@ -71,7 +71,7 @@ impl Fonts for UserFonts {
 }
 
 fn create_user_fonts(db: Database) -> Result<Option<UserFonts>> {
-    if db.len() > 0 {
+    if !db.is_empty() {
         let mut err = None;
         let fonts = UserFontsBuilder {
             db,
@@ -108,13 +108,13 @@ pub fn user_fonts(font_paths: &Vec<PathConfig>) -> Result<Option<UserFonts>> {
     } else {
         let mut db = Database::new();
         for config in font_paths {
-            if config.enabled {
-                if let Ok(mut file) = OpenOptions::new().read(true).open(&config.path) {
-                    let mut buf = vec![];
-                    file.read_to_end(&mut buf)?;
-                    let source = fontdb::Source::Binary(Arc::new(buf));
-                    db.load_font_source(source);
-                }
+            if config.enabled
+                && let Ok(mut file) = OpenOptions::new().read(true).open(&config.path)
+            {
+                let mut buf = vec![];
+                file.read_to_end(&mut buf)?;
+                let source = fontdb::Source::Binary(Arc::new(buf));
+                db.load_font_source(source);
             }
         }
         create_user_fonts(db)
@@ -165,16 +165,16 @@ impl HtmlFonts {
                 match self.fonts.binary_search_by(|(key, _)| key.cmp(&source)) {
                     Ok(idx) => refs.push(idx),
                     Err(idx) => {
-                        if let Some(content) = data_resolver(&source) {
-                            if let Ok(font) = FontVec::try_from_vec(content) {
-                                self.fonts.insert(idx, (source, font));
-                                for v in &mut refs {
-                                    if *v >= idx {
-                                        *v += 1;
-                                    }
+                        if let Some(content) = data_resolver(&source)
+                            && let Ok(font) = FontVec::try_from_vec(content)
+                        {
+                            self.fonts.insert(idx, (source, font));
+                            for v in &mut refs {
+                                if *v >= idx {
+                                    *v += 1;
                                 }
-                                refs.push(idx)
                             }
+                            refs.push(idx)
                         }
                     }
                 };
@@ -227,13 +227,11 @@ impl HtmlFonts {
         if let Ok(idx) = self
             .faces
             .binary_search_by(|face| face.family.as_str().cmp(font_family))
+            && let Some((_, font)) = self.fonts.get(idx)
+            && let Some(outlined) = get_glyph(char, font_size, font)
         {
-            if let Some((_, font)) = self.fonts.get(idx) {
-                if let Some(outlined) = get_glyph(char, font_size, font) {
-                    let rect = font.glyph_bounds(outlined.glyph());
-                    return Some((outlined, rect));
-                }
-            }
+            let rect = font.glyph_bounds(outlined.glyph());
+            return Some((outlined, rect));
         }
         None
     }

@@ -1,8 +1,8 @@
 use crate::terminal::Listable;
+use cursive::Cursive;
 use cursive::event::Key::Esc;
 use cursive::traits::Scrollable;
 use cursive::views::{Dialog, OnEventView, SelectView};
-use cursive::Cursive;
 
 pub(crate) fn list_dialog<'a, F, I, T: Listable>(
     title: &str,
@@ -31,14 +31,14 @@ where
         .scrollable()
         .show_scrollbars(false);
     scroll_view.scroll_to_important_area();
-    let dialog = OnEventView::new(Dialog::around(scroll_view).title(title))
+
+    OnEventView::new(Dialog::around(scroll_view).title(title))
         .on_event('q', |s| {
             s.pop_layer();
         })
         .on_event(Esc, |s| {
             s.pop_layer();
-        });
-    dialog
+        })
 }
 
 pub struct ListIterator<F, T>

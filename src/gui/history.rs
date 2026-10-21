@@ -12,13 +12,13 @@ use gtk4::prelude::{
     BoxExt, Cast, EditableExt, IsA, ListBoxRowExt, ListModelExt, PopoverExt, WidgetExt,
 };
 use gtk4::{
-    glib, Align, EventControllerKey, Label, ListBox, ListBoxRow, Orientation, Popover, SearchEntry,
-    SelectionMode, StringList, StringObject, Widget,
+    Align, EventControllerKey, Label, ListBox, ListBoxRow, Orientation, Popover, SearchEntry,
+    SelectionMode, StringList, StringObject, Widget, glib,
 };
 
-use crate::config::{match_filename, Configuration, ReadingInfo};
+use crate::config::{Configuration, ReadingInfo, match_filename};
 use crate::gui::view::GuiView;
-use crate::gui::{ignore_cap, GuiContext, MODIFIER_NONE};
+use crate::gui::{GuiContext, MODIFIER_NONE, ignore_cap};
 
 pub(super) struct HistoryList {
     search: SearchEntry,

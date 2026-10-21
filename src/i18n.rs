@@ -48,7 +48,7 @@ impl I18n {
                 let content: Cow<'static, [u8]> = Asset::get(file.as_ref()).unwrap().data;
                 let text = String::from_utf8(content.to_vec()).unwrap();
                 let res = FluentResource::try_new(text)
-                    .expect(&format!("Failed to parse an FTL string: {}", file));
+                    .unwrap_or_else(|_| panic!("Failed to parse an FTL string: {}", file));
 
                 let name = &file["i18n/".len()..file.len() - 4];
                 if name != DEFAULT_LOCALE {
@@ -56,14 +56,13 @@ impl I18n {
                 }
                 let langid_en: LanguageIdentifier = name
                     .parse()
-                    .expect(&format!("Parsing fluent failed: {}", file));
+                    .unwrap_or_else(|_| panic!("Parsing fluent failed: {}", file));
                 let mut bundle = FluentBundle::new(vec![langid_en]);
-                bundle.add_resource(res).expect(&format!(
-                    "Failed to add FTL resources to the bundle for : {}",
-                    name
-                ));
+                bundle.add_resource(res).unwrap_or_else(|_| {
+                    panic!("Failed to add FTL resources to the bundle for : {}", name)
+                });
                 let locale_name = bundle_msg(&bundle, "title", None)
-                    .expect(&format!("No title defined in : {file}"));
+                    .unwrap_or_else(|| panic!("No title defined in : {file}"));
                 locale_list.push(LocaleEntry::new(name, &locale_name));
                 bundles.insert(name.to_string(), bundle);
             }
@@ -77,7 +76,8 @@ impl I18n {
 
     pub fn msg(&self, key: &str) -> Cow<'_, str> {
         let bundle = self.bundles.get(&self.locale).unwrap();
-        bundle_msg(bundle, key, None).expect(&format!("No {key} defined in {}", self.locale))
+        bundle_msg(bundle, key, None)
+            .unwrap_or_else(|| panic!("No {key} defined in {}", self.locale))
     }
 
     pub fn args_msg<'a>(
@@ -91,7 +91,7 @@ impl I18n {
             args.set(name, value);
         }
         let msg = bundle_msg(bundle, key, Some(&args))
-            .expect(&format!("No {key} defined in {}", self.locale));
+            .unwrap_or_else(|| panic!("No {key} defined in {}", self.locale));
         msg.to_string()
     }
 

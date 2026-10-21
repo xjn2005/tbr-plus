@@ -1,22 +1,22 @@
 use std::fs;
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
+use cursive::Cursive;
+use cursive::CursiveExt;
 use cursive::event::Key::Esc;
 use cursive::event::{Callback, Event};
-use cursive::theme::{load_theme_file, load_toml, Error, Theme};
+use cursive::theme::{Error, Theme, load_theme_file, load_toml};
 use cursive::traits::Resizable;
 use cursive::view::{Nameable, SizeConstraint};
 use cursive::views::{EditView, LinearLayout, OnEventView, TextView, ViewRef};
-use cursive::Cursive;
-use cursive::CursiveExt;
 
 use view::ReadingView;
 
 use crate::config::{BookLoadingInfo, Configuration};
-use crate::list::{list_dialog, ListIterator};
-use crate::terminal::input_method::{setup_im, InputMethod};
-use crate::{description, version, version_string, Asset};
+use crate::list::{ListIterator, list_dialog};
+use crate::terminal::input_method::{InputMethod, setup_im};
+use crate::{Asset, description, version, version_string};
 
 mod input_method;
 pub mod view;
@@ -36,11 +36,7 @@ struct Themes {
 
 impl Themes {
     pub fn get(&self, dark: bool) -> &Theme {
-        if dark {
-            &self.dark
-        } else {
-            &self.bright
-        }
+        if dark { &self.dark } else { &self.bright }
     }
 }
 
@@ -56,7 +52,7 @@ pub trait Listable {
     fn id(&self) -> usize;
 }
 
-impl<'a> Listable for (&'a str, usize) {
+impl Listable for (&str, usize) {
     #[inline]
     fn title(&self) -> &str {
         self.0
@@ -91,7 +87,7 @@ pub fn start(
     });
     let status_view = LinearLayout::horizontal()
         .child(
-            TextView::new(&reading_view.status_msg())
+            TextView::new(reading_view.status_msg())
                 .no_wrap()
                 .with_name(STATUS_VIEW_NAME)
                 .resized(SizeConstraint::Full, SizeConstraint::Fixed(1)),
@@ -100,14 +96,14 @@ pub fn start(
     let layout = LinearLayout::vertical()
         .child(
             OnEventView::new(reading_view.with_name(TEXT_VIEW_NAME).full_screen())
-                .on_event('/', |s| setup_search_view(s))
-                .on_event(Event::CtrlChar('x'), |s| switch_render(s))
+                .on_event('/', setup_search_view)
+                .on_event(Event::CtrlChar('x'), switch_render)
                 .on_event('q', |s| s.quit())
                 .on_event('v', |s| update_status(s, version_string!()))
-                .on_event('g', |s| goto_line(s))
-                .on_event('b', |s| select_book(s))
-                .on_event('h', |s| select_history(s))
-                .on_event('t', |s| switch_theme(s))
+                .on_event('g', goto_line)
+                .on_event('b', select_book)
+                .on_event('h', select_history)
+                .on_event('t', switch_theme)
                 .on_event('c', move |s| {
                     let reading_view: ViewRef<ReadingView> = s.find_name(TEXT_VIEW_NAME).unwrap();
                     let book = reading_view.reading_book();
@@ -126,10 +122,10 @@ pub fn start(
                         move |s, new_index| {
                             let mut reading_view: ViewRef<ReadingView> =
                                 s.find_name(TEXT_VIEW_NAME).unwrap();
-                            if toc_index != new_index {
-                                if let Some(status) = reading_view.goto_toc(new_index) {
-                                    update_status(s, &status);
-                                }
+                            if toc_index != new_index
+                                && let Some(status) = reading_view.goto_toc(new_index)
+                            {
+                                update_status(s, &status);
                             }
                         },
                     );
@@ -236,9 +232,8 @@ fn select_history(s: &mut Cursive) {
             Some(dialog)
         })
         .unwrap();
-    match option {
-        Some(dialog) => s.add_layer(dialog),
-        None => (),
+    if let Some(dialog) = option {
+        s.add_layer(dialog)
     }
 }
 
@@ -344,14 +339,11 @@ where
             )
             .on_event(Esc, move |s| {
                 let mut layout: ViewRef<LinearLayout> = s.find_name(STATUS_LAYOUT_NAME).unwrap();
-                match layout.find_child_from_name(INPUT_LAYOUT_NAME) {
-                    Some(idx) => {
-                        layout.remove_child(idx).unwrap();
-                        // release layout, or focus_name will failed.
-                        drop(layout);
-                        s.focus_name(TEXT_VIEW_NAME).unwrap();
-                    }
-                    None => (),
+                if let Some(idx) = layout.find_child_from_name(INPUT_LAYOUT_NAME) {
+                    layout.remove_child(idx).unwrap();
+                    // release layout, or focus_name will failed.
+                    drop(layout);
+                    s.focus_name(TEXT_VIEW_NAME).unwrap();
                 };
                 cancel(s);
             }),

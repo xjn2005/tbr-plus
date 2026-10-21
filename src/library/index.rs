@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use anyhow::Result;
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 
 use crate::annotations::BookId;
 
@@ -86,10 +86,9 @@ create index if not exists library_documents_book on library_documents(book_id);
         let old_ids = {
             let mut old = transaction
                 .prepare("select document_id from library_documents where book_id = ?")?;
-            let ids = old
-                .query_map([book_id.as_bytes().as_slice()], |row| row.get::<_, i64>(0))?
-                .collect::<rusqlite::Result<Vec<_>>>()?;
-            ids
+
+            old.query_map([book_id.as_bytes().as_slice()], |row| row.get::<_, i64>(0))?
+                .collect::<rusqlite::Result<Vec<_>>>()?
         };
         for id in old_ids {
             transaction.execute("delete from library_fts where rowid = ?", [id])?;
@@ -136,12 +135,12 @@ create index if not exists library_documents_book on library_documents(book_id);
             let mut statement = transaction.prepare(
                 "select document_id from library_documents where book_id = ? and chapter = ?",
             )?;
-            let ids = statement
+
+            statement
                 .query_map(params![book_id.as_bytes().as_slice(), chapter], |row| {
                     row.get::<_, i64>(0)
                 })?
-                .collect::<rusqlite::Result<Vec<_>>>()?;
-            ids
+                .collect::<rusqlite::Result<Vec<_>>>()?
         };
         for id in old_ids {
             transaction.execute("delete from library_fts where rowid = ?", [id])?;
@@ -243,7 +242,7 @@ fn is_cjk(ch: char) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{searchable, LibraryDocument, LibraryIndex};
+    use super::{LibraryDocument, LibraryIndex, searchable};
     use crate::annotations::BookId;
 
     #[test]

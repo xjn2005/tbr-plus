@@ -1,12 +1,12 @@
 use crate::book::{Line, SearchError};
 use crate::common::{byte_index_for_char, char_width};
 use crate::config::BookLoadingInfo;
-use crate::container::{load_book, load_container, Container, ContainerManager};
-use crate::gui::{load_button_image, IconMap};
+use crate::container::{Container, ContainerManager, load_book, load_container};
+use crate::gui::{IconMap, load_button_image};
 use crate::i18n::I18n;
 use anyhow::Result;
 use fancy_regex::Regex;
-use gtk4::glib::{idle_add_local, markup_escape_text, ControlFlow};
+use gtk4::glib::{ControlFlow, idle_add_local, markup_escape_text};
 use gtk4::pango::EllipsizeMode;
 use gtk4::prelude::{BoxExt, ButtonExt, CheckButtonExt, EditableExt, ListBoxRowExt, WidgetExt};
 use gtk4::{
@@ -18,7 +18,7 @@ use std::cell::{RefCell, RefMut};
 use std::ops::Range;
 use std::rc::Rc;
 use std::sync::mpsc::{Receiver, Sender, TryRecvError};
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{Arc, Mutex, mpsc};
 use std::thread::spawn;
 
 #[derive(Clone)]
@@ -145,11 +145,10 @@ impl FindList {
                                         &find_list,
                                         &state,
                                     );
-                                    return;
                                 }
                                 FindState::Finding => *guard = FindState::Stopping,
                                 FindState::Stopping => {}
-                            };
+                            }
                         }
                     });
                 }
@@ -177,12 +176,11 @@ impl FindList {
                     if index < 0 {
                         return;
                     }
-                    if let Ok(mut inner) = inner.try_borrow_mut() {
-                        if let Some(entry) = inner.rows.get(index as usize) {
-                            if f(entry) {
-                                inner.inner_book = entry.inner_book;
-                            }
-                        }
+                    if let Ok(mut inner) = inner.try_borrow_mut()
+                        && let Some(entry) = inner.rows.get(index as usize)
+                        && f(entry)
+                    {
+                        inner.inner_book = entry.inner_book;
                     }
                 }
             });
@@ -198,13 +196,13 @@ fn find_in_book(
     tx: &Sender<FoundEntry>,
     state: &Arc<Mutex<FindState>>,
 ) -> Result<(), SearchError> {
-    let loading = BookLoadingInfo::NewReading(&filename, inner_book, 0, 16);
-    if let Ok((mut book, _)) = load_book(&container_manager, container, loading) {
+    let loading = BookLoadingInfo::NewReading(filename, inner_book, 0, 16);
+    if let Ok((mut book, _)) = load_book(container_manager, container, loading) {
         let mut chapter = 0;
         loop {
             let chapter_title = book.title(0, 0);
             for (idx, line) in book.lines().iter().enumerate() {
-                line.search_pattern(&regex, |text, range| {
+                line.search_pattern(regex, |text, range| {
                     let (display_text, highlight_display_bytes) =
                         make_display_text(line, text, &range).ok_or(SearchError::Custom(
                             Cow::Borrowed("Failed setup display text for found"),
@@ -223,10 +221,10 @@ fn find_in_book(
                     Ok(())
                 })?;
             }
-            if let Ok(state) = state.try_lock() {
-                if matches!(*state, FindState::Stopping) {
-                    return Ok(());
-                }
+            if let Ok(state) = state.try_lock()
+                && matches!(*state, FindState::Stopping)
+            {
+                return Ok(());
             }
             match book.next_chapter() {
                 Ok(Some(c)) => chapter = c,
@@ -297,7 +295,7 @@ fn find(
     };
     let text = input.text();
     let pattern = text.as_str().trim();
-    let regex = match Regex::new(&pattern) {
+    let regex = match Regex::new(pattern) {
         Ok(regex) => regex,
         Err(_) => return true,
     };
@@ -357,7 +355,7 @@ fn create_entry_label(entry: &FoundEntry, i18n: &I18n) -> gtk4::Box {
     entry_label.append(
         &Label::builder()
             .halign(Align::End)
-            .label(&format!("{} : {}", entry.line + 1, entry.range.start + 1))
+            .label(format!("{} : {}", entry.line + 1, entry.range.start + 1))
             .build(),
     );
 
@@ -470,10 +468,10 @@ fn retrieve_entries(
     rx: &Receiver<FoundEntry>,
 ) -> bool {
     for _ in 0..BATCH_CREATE_SIZE {
-        if let Ok(state) = state.try_lock() {
-            if matches!(*state, FindState::Stopping) {
-                return false;
-            }
+        if let Ok(state) = state.try_lock()
+            && matches!(*state, FindState::Stopping)
+        {
+            return false;
         }
         match rx.try_recv() {
             Ok(entry) => {

@@ -66,9 +66,7 @@ fn yaml_string(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use crate::annotations::anchor::Anchor;
-    use crate::annotations::model::{
-        Annotation, AnnotationColor, AnnotationStatus, BookId, BookMetadata,
-    };
+    use crate::annotations::model::{Annotation, AnnotationColor, AnnotationStatus, BookMetadata};
     use crate::book::Line;
 
     use super::export_book;
@@ -76,11 +74,9 @@ mod tests {
     #[test]
     fn markdown_export_is_stable_and_orders_annotations_by_location() {
         let lines = vec![Line::new("first quote"), Line::new("second quote")];
-        let book_id = BookId::from_content(b"book", "A Book", Some("Ada"));
         let annotations = vec![
             Annotation {
                 id: 2,
-                book_id: book_id.clone(),
                 anchor: Anchor::new(0, 1, 1, 0, 1, 6, &lines).unwrap(),
                 color: AnnotationColor::Blue,
                 note: Some("A thought".into()),
@@ -88,11 +84,9 @@ mod tests {
                 starred: false,
                 status: AnnotationStatus::Normal,
                 created_at: 2,
-                updated_at: 2,
             },
             Annotation {
                 id: 1,
-                book_id,
                 anchor: Anchor::new(0, 0, 0, 0, 0, 5, &lines).unwrap(),
                 color: AnnotationColor::Yellow,
                 note: None,
@@ -100,7 +94,6 @@ mod tests {
                 starred: true,
                 status: AnnotationStatus::Pending,
                 created_at: 1,
-                updated_at: 1,
             },
         ];
         let markdown = export_book(

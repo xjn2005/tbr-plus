@@ -4,7 +4,7 @@ use cursive::theme::{ColorStyle, PaletteColor};
 use cursive::{Printer, Vec2, View, XY};
 
 use crate::book::{Book, Line};
-use crate::common::{char_width, Position};
+use crate::common::{Position, char_width};
 use crate::config::{BookLoadingInfo, ReadingInfo};
 use crate::container::Container;
 use crate::controller::{Controller, HighlightInfo, HighlightMode, Render};

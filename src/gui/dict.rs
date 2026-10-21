@@ -2,13 +2,13 @@ use crate::book::{Book, ImageData, Line, TEXT_SELECTION_SPLITTER};
 use crate::color::{Color32, Colors};
 use crate::common::Position;
 use crate::config::PathConfig;
-use crate::controller::{highlight_selection, HighlightInfo, Render};
+use crate::controller::{HighlightInfo, Render, highlight_selection};
 use crate::gui::font::UserFonts;
 use crate::gui::render::{RenderContext, ScrollRedrawMethod};
 use crate::gui::view::{GuiView, ScrollPosition};
 use crate::gui::{
-    copy_to_clipboard, create_button, ignore_cap, IconMap, MAX_FONT_SIZE, MIN_FONT_SIZE,
-    MODIFIER_NONE,
+    IconMap, MAX_FONT_SIZE, MIN_FONT_SIZE, MODIFIER_NONE, copy_to_clipboard, create_button,
+    ignore_cap,
 };
 use crate::html_parser::{HtmlContent, HtmlParseOptions};
 use crate::i18n::I18n;
@@ -74,7 +74,7 @@ pub(super) struct DictionaryBook {
 impl Book for DictionaryBook {
     #[inline]
     fn lines(&self) -> &Vec<Line> {
-        &self.content.lines()
+        self.content.lines()
     }
 
     #[inline]
@@ -112,11 +112,10 @@ impl DictionaryBook {
     ) {
         for config in dictionary_paths {
             if config.enabled {
-                if cache_dict {
-                    if let Ok(dict) = stardict::with_sqlite(&config.path, package_name!()) {
-                        dictionaries.push(Box::new(dict));
-                        continue;
-                    }
+                if cache_dict && let Ok(dict) = stardict::with_sqlite(&config.path, package_name!())
+                {
+                    dictionaries.push(Box::new(dict));
+                    continue;
                 }
                 if let Ok(dict) = stardict::no_cache(&config.path) {
                     dictionaries.push(Box::new(dict));
@@ -406,12 +405,12 @@ impl DictionaryManager {
     #[inline]
     fn goto_link(&mut self, line: usize, link_index: usize) {
         let book = self.db.borrow();
-        if let Some(line) = book.lines().get(line) {
-            if let Some(link) = line.link_at(link_index) {
-                let target = link.target.trim().to_owned();
-                drop(book);
-                self.set_lookup(target);
-            }
+        if let Some(line) = book.lines().get(line)
+            && let Some(link) = line.link_at(link_index)
+        {
+            let target = link.target.trim().to_owned();
+            drop(book);
+            self.set_lookup(target);
         }
     }
 
@@ -587,7 +586,7 @@ fn setup_ui(dm: &Rc<RefCell<DictionaryManager>>, backward_btn: &Button, forward_
             .lookup_input
             .connect_activate(move |entry| {
                 let lookup_pattern = entry.text();
-                if lookup_pattern.len() == 0 {
+                if lookup_pattern.is_empty() {
                     return;
                 }
                 let mut dictionary_manager = dm.borrow_mut();
@@ -767,7 +766,7 @@ fn setup_ui(dm: &Rc<RefCell<DictionaryManager>>, backward_btn: &Button, forward_
 
 #[cfg(test)]
 mod tests {
-    use crate::gui::dict::{inject_definition, INJECT_REGEXP};
+    use crate::gui::dict::{INJECT_REGEXP, inject_definition};
     use fancy_regex::Regex;
 
     #[test]

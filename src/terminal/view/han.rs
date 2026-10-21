@@ -123,14 +123,12 @@ impl Render<RenderContext> for Han {
                 left
             };
             let mut draw_line = vec![];
-            if offset == 0 && left > 0 {
-                if with_leading(text) {
-                    for _i in 0..leading_space {
-                        draw_line.push(DrawChar::space());
-                    }
-                    if charts_to_draw > height - leading_space {
-                        charts_to_draw = height - leading_space;
-                    }
+            if offset == 0 && left > 0 && with_leading(text) {
+                for _i in 0..leading_space {
+                    draw_line.push(DrawChar::space());
+                }
+                if charts_to_draw > height - leading_space {
+                    charts_to_draw = height - leading_space;
                 }
             }
             for _y in 0..charts_to_draw {

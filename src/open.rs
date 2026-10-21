@@ -1,17 +1,12 @@
 use anyhow::Result;
-use rand::distributions::Alphanumeric;
 use rand::Rng;
+use rand::distributions::Alphanumeric;
 use std::path::PathBuf;
 use std::{env, fs};
 
+#[derive(Default)]
 pub struct Opener {
     files: Vec<PathBuf>,
-}
-
-impl Default for Opener {
-    fn default() -> Self {
-        Opener { files: vec![] }
-    }
 }
 
 impl Opener {
@@ -37,7 +32,7 @@ impl Opener {
     pub fn cleanup(&mut self) {
         for tmp in self.files.drain(..) {
             if let Err(err) = fs::remove_file(&tmp) {
-                eprint!("Failed delete temp file: {:#?}: {}", tmp, err.to_string());
+                eprint!("Failed delete temp file: {:#?}: {}", tmp, err);
             }
         }
     }

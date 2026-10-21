@@ -8,12 +8,12 @@ use crate::book::{Book, Line};
 use crate::color::Color32;
 use crate::common::{han_render_char, is_compact_for_han, with_leading};
 use crate::controller::HighlightInfo;
-use crate::gui::math::{pos2, vec2, Pos2, Rect};
+use crate::gui::math::{Pos2, Rect, pos2, vec2};
 use crate::gui::render::imp::draw_border;
 use crate::gui::render::{
-    update_for_highlight, vline, CharCell, CharDrawData, GuiRender, ImageDrawingData,
-    PointerPosition, RenderCell, RenderChar, RenderContext, RenderLine, ScrollSizing,
-    ScrolledDrawData, TextDecoration,
+    CharCell, CharDrawData, GuiRender, ImageDrawingData, PointerPosition, RenderCell, RenderChar,
+    RenderContext, RenderLine, ScrollSizing, ScrolledDrawData, TextDecoration,
+    update_for_highlight, vline,
 };
 use crate::html_parser;
 use crate::html_parser::{BorderLines, TextDecorationLine, TextStyle};
@@ -226,14 +226,14 @@ impl GuiRender for GuiHanRender {
             };
             draw_chars.push(dc);
         }
-        if draw_chars.len() > 0 {
+        if !draw_chars.is_empty() {
             let mut render_line = RenderLine::new(line, line_size, line_space);
             align_line(&mut render_line, draw_chars);
             self.setup_decorations(text, &mut render_line, context);
             self.baseline -= render_line.line_size() + render_line.line_space();
             draw_lines.push(render_line);
         }
-        return draw_lines;
+        draw_lines
     }
 
     fn draw_decoration(&self, decoration: &TextDecoration, cairo: &CairoContext) {
@@ -334,7 +334,7 @@ impl GuiRender for GuiHanRender {
                 return render_line
                     .find(|j, dc| {
                         if y > dc.rect.top() && y <= dc.rect.bottom() {
-                            return Some((PointerPosition::Exact(i), PointerPosition::Exact(j)));
+                            Some((PointerPosition::Exact(i), PointerPosition::Exact(j)))
                         } else {
                             None
                         }
@@ -376,22 +376,21 @@ impl GuiRender for GuiHanRender {
             context: &RenderContext,
             bottom: f32,
         ) -> (f32, f32) {
-            if render_in_single_line {
-                if let Some(render_line) = render_lines.get(range.start) {
-                    if let (Some(first), Some(last)) = (
-                        render_line.first_render_char(),
-                        render_line.last_render_char(),
-                    ) {
-                        let top = first.rect.min.y;
-                        let first_margin = (first.rect.max.y - top) / 8.;
-                        let top = top - first_margin;
+            if render_in_single_line
+                && let Some(render_line) = render_lines.get(range.start)
+                && let (Some(first), Some(last)) = (
+                    render_line.first_render_char(),
+                    render_line.last_render_char(),
+                )
+            {
+                let top = first.rect.min.y;
+                let first_margin = (first.rect.max.y - top) / 8.;
+                let top = top - first_margin;
 
-                        let bottom = last.rect.max.y;
-                        let last_margin = (bottom - last.rect.min.y) / 8.;
-                        let bottom = bottom + last_margin;
-                        return (top, bottom - top);
-                    }
-                }
+                let bottom = last.rect.max.y;
+                let last_margin = (bottom - last.rect.min.y) / 8.;
+                let bottom = bottom + last_margin;
+                return (top, bottom - top);
             }
             let top = context.render_rect.min.y;
             let y_padding = context.y_padding();
@@ -461,12 +460,12 @@ impl GuiRender for GuiHanRender {
                 break;
             }
         }
-        let end = end.unwrap_or_else(|| render_lines.len());
-        let draw_data = Some(ScrolledDrawData {
+        let end = end.unwrap_or(render_lines.len());
+
+        Some(ScrolledDrawData {
             offset: pos2(offset, 0.),
             range: start..end,
-        });
-        draw_data
+        })
     }
 
     #[inline]

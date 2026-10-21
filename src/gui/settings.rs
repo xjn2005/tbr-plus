@@ -5,27 +5,26 @@ use std::rc::Rc;
 use crate::color::Color32;
 use gtk4::gdk::Key;
 use gtk4::gio::{Cancellable, File, ListStore};
-use gtk4::glib::prelude::Cast;
 use gtk4::glib::Object;
+use gtk4::glib::prelude::Cast;
 use gtk4::prelude::{
     BoxExt, ButtonExt, CheckButtonExt, EditableExt, FileExt, GtkWindowExt, ListBoxRowExt,
     ListModelExt, WidgetExt,
 };
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{
-    glib, AlertDialog, Align, ApplicationWindow, Button, CheckButton, ColorDialog,
-    ColorDialogButton, DropDown, Entry, EventControllerKey, FileDialog, FileFilter, Label, ListBox,
-    ListBoxRow, Orientation, PolicyType, ScrolledWindow, SelectionMode, Separator, StringList,
-    Window,
+    AlertDialog, Align, ApplicationWindow, Button, CheckButton, ColorDialog, ColorDialogButton,
+    DropDown, Entry, EventControllerKey, FileDialog, FileFilter, Label, ListBox, ListBoxRow,
+    Orientation, PolicyType, ScrolledWindow, SelectionMode, Separator, StringList, Window, glib,
 };
 
+use crate::I18n;
 use crate::config::{Configuration, PathConfig, SidebarPosition};
 use crate::gui::font::UserFonts;
 use crate::gui::{
-    alert, create_button, font, set_sidebar_position, sidebar_updated, GuiContext, IconMap,
-    DICT_FILE_EXTENSIONS, FONT_FILE_EXTENSIONS, MAX_FONT_SIZE, MIN_FONT_SIZE, MODIFIER_NONE,
+    DICT_FILE_EXTENSIONS, FONT_FILE_EXTENSIONS, GuiContext, IconMap, MAX_FONT_SIZE, MIN_FONT_SIZE,
+    MODIFIER_NONE, alert, create_button, font, set_sidebar_position, sidebar_updated,
 };
-use crate::I18n;
 
 const SIDEBAR_POSITIONS: [SidebarPosition; 2] = [SidebarPosition::Left, SidebarPosition::Top];
 
@@ -214,7 +213,7 @@ where
 
     let font_size_entry = {
         let entry = Entry::builder()
-            .text(&format!("{}", configuration.gui.default_font_size))
+            .text(format!("{}", configuration.gui.default_font_size))
             .build();
 
         let fs_box = gtk4::Box::new(Orientation::Horizontal, 10);
@@ -222,7 +221,7 @@ where
         fs_box.append(&entry);
         fs_box.append(
             &Label::builder()
-                .label(&format!("({} - {})", MIN_FONT_SIZE, MAX_FONT_SIZE))
+                .label(format!("({} - {})", MIN_FONT_SIZE, MAX_FONT_SIZE))
                 .build(),
         );
 
@@ -302,12 +301,11 @@ where
                 font_dialog.open_multiple(Some(&dialog), None::<&Cancellable>, move |result| {
                     if let Ok(files) = result {
                         for i in 0..files.n_items() {
-                            if let Some(obj) = files.item(i) {
-                                if let Some(file) = obj.downcast_ref::<File>() {
-                                    if let Some(path) = file.path() {
-                                        check_and_add(&path, &font_list);
-                                    }
-                                }
+                            if let Some(obj) = files.item(i)
+                                && let Some(file) = obj.downcast_ref::<File>()
+                                && let Some(path) = file.path()
+                            {
+                                check_and_add(&path, &font_list);
                             }
                         }
                     }
@@ -342,21 +340,21 @@ where
                 let title = title.clone();
                 let i18n = i18n.clone();
                 dict_dialog.open(Some(&dialog), None::<&Cancellable>, move |result| {
-                    if let Ok(file) = result {
-                        if let Some(path) = file.path() {
-                            if stardict::no_cache(&path).is_ok() {
-                                check_and_add(&path, &dict_list);
-                            } else {
-                                AlertDialog::builder()
-                                    .modal(true)
-                                    .message(&title)
-                                    .detail(i18n.args_msg(
-                                        "invalid-path",
-                                        vec![("title", title), ("path", path_str(&path))],
-                                    ))
-                                    .build()
-                                    .show(Some(&dialog2));
-                            }
+                    if let Ok(file) = result
+                        && let Some(path) = file.path()
+                    {
+                        if stardict::no_cache(&path).is_ok() {
+                            check_and_add(&path, &dict_list);
+                        } else {
+                            AlertDialog::builder()
+                                .modal(true)
+                                .message(&title)
+                                .detail(i18n.args_msg(
+                                    "invalid-path",
+                                    vec![("title", title), ("path", path_str(&path))],
+                                ))
+                                .build()
+                                .show(Some(&dialog2));
                         }
                     }
                 });
@@ -409,7 +407,7 @@ where
         ok_btn.connect_clicked(move |_| {
             let default_font_size = match font_size_entry.text().to_string().trim().parse() {
                 Ok(default_font_size) => {
-                    if default_font_size < MIN_FONT_SIZE || default_font_size > MAX_FONT_SIZE {
+                    if !(MIN_FONT_SIZE..=MAX_FONT_SIZE).contains(&default_font_size) {
                         alert(
                             &i18n.msg("alert-error-title"),
                             &i18n.msg("invalid-default-font-size"),
@@ -434,7 +432,7 @@ where
                 let locales = i18n.locales();
                 &locales
                     .get(idx as usize)
-                    .unwrap_or(locales.get(0).unwrap())
+                    .unwrap_or(locales.first().unwrap())
                     .locale
             };
             let ignore_font_weight = ignore_font_weight_cb.is_active();
@@ -573,7 +571,7 @@ fn check_and_add(path: &PathBuf, list: &ListStore) {
         }
     }
     if !found {
-        let entry = PathConfigEntry::new(true, &path);
+        let entry = PathConfigEntry::new(true, path);
         list.append(&entry);
     }
 }

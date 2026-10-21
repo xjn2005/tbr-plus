@@ -2,12 +2,12 @@ use std::fs::{File, OpenOptions};
 use std::io::Read;
 
 use anyhow::Result;
-use lexical_sort::{natural_lexical_cmp, StringSort};
+use lexical_sort::{StringSort, natural_lexical_cmp};
 use zip::ZipArchive;
 
+use crate::BookLoader;
 use crate::common::plain_text;
 use crate::container::{BookContent, BookName, Container, ContainerLoader};
-use crate::BookLoader;
 
 pub(crate) struct ZipLoader {}
 
@@ -23,7 +23,7 @@ impl ContainerLoader for ZipLoader {
         let mut buf = vec![];
         for i in 0..zip.len() {
             let zip_file = zip.by_index(i)?;
-            if buf.len() > 0 {
+            if !buf.is_empty() {
                 buf.push(b'\n');
             }
             buf.extend_from_slice(zip_file.name_raw());

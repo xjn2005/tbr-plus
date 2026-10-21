@@ -8,12 +8,12 @@ use crate::book::{Book, Line};
 use crate::color::Color32;
 use crate::common::with_leading;
 use crate::controller::HighlightInfo;
-use crate::gui::math::{pos2, Pos2, Rect, Vec2};
+use crate::gui::math::{Pos2, Rect, Vec2, pos2};
 use crate::gui::render::imp::draw_border;
 use crate::gui::render::{
-    hline, update_for_highlight, CharCell, CharDrawData, GuiRender, ImageDrawingData,
-    PointerPosition, RenderCell, RenderChar, RenderContext, RenderLine, ScrollSizing,
-    ScrolledDrawData, TextDecoration,
+    CharCell, CharDrawData, GuiRender, ImageDrawingData, PointerPosition, RenderCell, RenderChar,
+    RenderContext, RenderLine, ScrollSizing, ScrolledDrawData, TextDecoration, hline,
+    update_for_highlight,
 };
 use crate::html_parser;
 use crate::html_parser::{BorderLines, TextDecorationLine, TextStyle};
@@ -312,7 +312,7 @@ impl GuiRender for GuiXiRender {
                 break_position = Some(draw_chars.len());
             }
         }
-        if draw_chars.len() > 0 {
+        if !draw_chars.is_empty() {
             self.baseline = self.push_line(
                 &mut draw_lines,
                 draw_chars,
@@ -322,7 +322,7 @@ impl GuiRender for GuiXiRender {
                 self.baseline,
             );
         }
-        return draw_lines;
+        draw_lines
     }
 
     fn draw_decoration(&self, decoration: &TextDecoration, cairo: &CairoContext) {
@@ -466,22 +466,21 @@ impl GuiRender for GuiXiRender {
             context: &RenderContext,
             left: f32,
         ) -> (f32, f32) {
-            if render_in_single_line {
-                if let Some(render_line) = render_lines.get(range.start) {
-                    if let (Some(first), Some(last)) = (
-                        render_line.first_render_char(),
-                        render_line.last_render_char(),
-                    ) {
-                        let left = first.rect.min.x;
-                        let first_margin = (first.rect.max.x - left) / 8.;
-                        let left = left - first_margin;
+            if render_in_single_line
+                && let Some(render_line) = render_lines.get(range.start)
+                && let (Some(first), Some(last)) = (
+                    render_line.first_render_char(),
+                    render_line.last_render_char(),
+                )
+            {
+                let left = first.rect.min.x;
+                let first_margin = (first.rect.max.x - left) / 8.;
+                let left = left - first_margin;
 
-                        let right = last.rect.max.x;
-                        let last_margin = (right - last.rect.min.x) / 8.;
-                        let right = right + last_margin;
-                        return (left, right - left);
-                    }
-                }
+                let right = last.rect.max.x;
+                let last_margin = (right - last.rect.min.x) / 8.;
+                let right = right + last_margin;
+                return (left, right - left);
             }
             let x_padding = context.x_padding();
             let right = context.render_rect.max.x;
@@ -694,12 +693,12 @@ impl GuiRender for GuiXiRender {
                 break;
             }
         }
-        let end = end.unwrap_or_else(|| render_lines.len());
-        let draw_data = Some(ScrolledDrawData {
+        let end = end.unwrap_or(render_lines.len());
+
+        Some(ScrolledDrawData {
             offset: pos2(0., -scroll_value),
             range: start..end,
-        });
-        draw_data
+        })
     }
 
     #[inline]

@@ -5,18 +5,18 @@ use gtk4::pango::{FontDescription, Layout as PangoContext};
 use gtk4::prelude::GdkCairoContextExt;
 use gtk4::{cairo, pango};
 use indexmap::IndexSet;
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::ops::Range;
 use std::rc::Rc;
 
 use crate::book::{Book, CharStyle, Line};
 use crate::color::{Color32, Colors};
-use crate::common::{overlap_range, Position};
+use crate::common::{Position, overlap_range};
 use crate::controller::{HighlightInfo, HighlightMode};
 use crate::gui::font::{Fonts, HtmlFonts, UserFonts};
 use crate::gui::load_image;
-use crate::gui::math::{pos2, vec2, Pos2, Rect, Vec2};
+use crate::gui::math::{Pos2, Rect, Vec2, pos2, vec2};
 use crate::html_parser;
 use crate::html_parser::{
     BlockStyle, BorderLines, FontScale, FontWeight, ImageLength, ImageStyle, TextDecorationStyle,
@@ -261,7 +261,7 @@ impl PangoDrawData {
         let text = char.to_string();
         let font_size = font_size as u8;
         let font_family_names = get_font_family_names(font_family_idx, font_family_names);
-        set_pango_font_size(font_size, &font_weight, font_family_names, layout);
+        set_pango_font_size(font_size, font_weight, font_family_names, layout);
         layout.set_text(&text);
         let (ink_rect, logical_rect) = layout.pixel_extents();
         let logical_x = logical_rect.x() as f32;
@@ -279,7 +279,7 @@ impl PangoDrawData {
             char: text,
             font_size,
             font_weight: font_weight.clone(),
-            font_family: font_family_idx.clone(),
+            font_family: *font_family_idx,
             size,
             draw_offset,
             draw_size,
@@ -303,7 +303,7 @@ impl PangoDrawData {
         let y_offset = offset_y as f64;
         color.apply(cairo);
         cairo.move_to(x_offset, y_offset);
-        pangocairo::functions::show_layout(cairo, &layout);
+        pangocairo::functions::show_layout(cairo, layout);
     }
 }
 
@@ -750,7 +750,7 @@ pub trait GuiRender {
             start,
             end,
             color,
-            lines: border_lines.clone(),
+            lines: *border_lines,
         }
     }
 
@@ -781,7 +781,7 @@ pub trait GuiRender {
                 if let Some((render_range, start, end)) = make_render_range(range, &render_range) {
                     self.setup_border(
                         render_line,
-                        lines.clone(),
+                        lines,
                         render_range,
                         start,
                         end,
@@ -847,7 +847,7 @@ pub trait GuiRender {
                             } else {
                                 rc.current_block_border = Some((
                                     rc.render_line_start,
-                                    border_lines.clone(),
+                                    *border_lines,
                                     color,
                                     if rc.offset == 0 {
                                         BlockStylePart::Begin
@@ -861,19 +861,27 @@ pub trait GuiRender {
                                 &rc.current_block_border
                             {
                                 let target_part = match part {
-								BlockStylePart::Begin => if overflow {
-									BlockStylePart::Begin
-								} else {
-									BlockStylePart::Single
-								},
-								BlockStylePart::End => panic!("End part of block style should not exists in scan process."),
-								BlockStylePart::Middle => if overflow {
-									BlockStylePart::Middle
-								} else {
-									BlockStylePart::End
-								}
-								BlockStylePart::Single => panic!("Single part of block style should not exists in scan process."),
-							};
+                                    BlockStylePart::Begin => {
+                                        if overflow {
+                                            BlockStylePart::Begin
+                                        } else {
+                                            BlockStylePart::Single
+                                        }
+                                    }
+                                    BlockStylePart::End => panic!(
+                                        "End part of block style should not exists in scan process."
+                                    ),
+                                    BlockStylePart::Middle => {
+                                        if overflow {
+                                            BlockStylePart::Middle
+                                        } else {
+                                            BlockStylePart::End
+                                        }
+                                    }
+                                    BlockStylePart::Single => panic!(
+                                        "Single part of block style should not exists in scan process."
+                                    ),
+                                };
                                 (*start, target_part)
                             } else if overflow {
                                 (rc.render_line_start, BlockStylePart::Middle)
@@ -893,7 +901,7 @@ pub trait GuiRender {
                         } else if rc.current_block_border.is_none() {
                             rc.current_block_border = Some((
                                 rc.render_line_start,
-                                border_lines.clone(),
+                                *border_lines,
                                 color,
                                 BlockStylePart::Middle,
                             ));
@@ -1001,7 +1009,7 @@ pub trait GuiRender {
             let line = &lines[index];
             let wrapped_lines = self.try_wrap_line(
                 book,
-                &line,
+                line,
                 index,
                 rc.offset,
                 line.len(),
@@ -1110,7 +1118,7 @@ pub trait GuiRender {
         for index in (0..=reading_line).rev() {
             let line = &lines[index];
             let wrapped_lines =
-                self.try_wrap_line(book, &line, index, 0, offset, &None, pango, context);
+                self.try_wrap_line(book, line, index, 0, offset, &None, pango, context);
             offset = usize::MAX;
             for wrapped_line in wrapped_lines.iter().rev() {
                 drawn_size += wrapped_line.line_size;
@@ -1323,8 +1331,8 @@ pub trait GuiRender {
         const SPACE: char = ' ';
         const FULL_SPACE: char = '　';
 
-        let font_size = scale_font_size(render_context.font_size, &font_scale);
-        let font_weight = load_font_weight(&font_weight, render_context);
+        let font_size = scale_font_size(render_context.font_size, font_scale);
+        let font_weight = load_font_weight(font_weight, render_context);
         let render_fonts = if render_context.custom_font {
             book_fonts
         } else {
@@ -1332,14 +1340,14 @@ pub trait GuiRender {
             None
         };
 
-        if let Some(data) = self.cache_get(char, font_size, &font_weight, font_family_idx) {
+        if let Some(data) = self.cache_get(char, font_size, font_weight, font_family_idx) {
             return CharMeasures {
                 size: data.size(),
                 draw_size: data.draw_size(),
                 draw_offset: data.offset(),
                 font_size,
                 font_weight: font_weight.clone(),
-                font_family_idx: font_family_idx.clone(),
+                font_family_idx: *font_family_idx,
             };
         }
         match char {
@@ -1357,7 +1365,7 @@ pub trait GuiRender {
                 self.cache_insert(
                     SPACE,
                     font_size,
-                    &font_weight,
+                    font_weight,
                     font_family_idx,
                     CharDrawData::Space(measures.size),
                 );
@@ -1377,7 +1385,7 @@ pub trait GuiRender {
                 self.cache_insert(
                     FULL_SPACE,
                     font_size,
-                    &font_weight,
+                    font_weight,
                     font_family_idx,
                     CharDrawData::Space(measures.size),
                 );
@@ -1421,12 +1429,12 @@ pub trait GuiRender {
                 draw_offset: draw_data.draw_offset,
                 font_size,
                 font_weight: font_weight.clone(),
-                font_family_idx: font_family_idx.clone(),
+                font_family_idx: *font_family_idx,
             };
             self.cache_insert(
                 char,
                 font_size,
-                &font_weight,
+                font_weight,
                 font_family_idx,
                 CharDrawData::Outline(draw_data),
             );
@@ -1445,12 +1453,12 @@ pub trait GuiRender {
                 draw_offset: draw_data.draw_offset,
                 font_size,
                 font_weight: font_weight.clone(),
-                font_family_idx: font_family_idx.clone(),
+                font_family_idx: *font_family_idx,
             };
             self.cache_insert(
                 char,
                 font_size,
-                &font_weight,
+                font_weight,
                 font_family_idx,
                 CharDrawData::Outline(draw_data),
             );
@@ -1470,12 +1478,12 @@ pub trait GuiRender {
                 draw_offset: draw_data.draw_offset,
                 font_size,
                 font_weight: font_weight.clone(),
-                font_family_idx: font_family_idx.clone(),
+                font_family_idx: *font_family_idx,
             };
             self.cache_insert(
                 char,
                 font_size,
-                &font_weight,
+                font_weight,
                 font_family_idx,
                 CharDrawData::Pango(draw_data),
             );
@@ -1674,11 +1682,7 @@ pub fn update_for_highlight(
 #[inline]
 fn scale_font_size(font_size: u8, scale: &FontScale) -> f32 {
     let scaled_size = scale.scale(font_size as f32);
-    if scaled_size < 9.0 {
-        9.0
-    } else {
-        scaled_size
-    }
+    if scaled_size < 9.0 { 9.0 } else { scaled_size }
 }
 
 #[inline]
@@ -1704,46 +1708,6 @@ where
 
     draw(cairo, middle - delta);
     draw(cairo, middle + delta);
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{update_for_highlight, PersistentHighlight};
-    use crate::color::{Color32, Colors};
-    use crate::controller::{HighlightInfo, HighlightMode};
-
-    #[test]
-    fn temporary_selection_wins_over_persistent_annotation() {
-        let colors = Colors::DEFAULT_BRIGHT;
-        let annotations = [PersistentHighlight::new(3, 2..5, Color32::LIGHT_YELLOW)];
-        let selection = Some(HighlightInfo {
-            line: 3,
-            start: 2,
-            end: 5,
-            mode: HighlightMode::Selection("text".into(), 3),
-        });
-        assert_eq!(
-            update_for_highlight(3, 3, None, &colors, &selection, &annotations),
-            Some(colors.highlight_background),
-        );
-    }
-
-    #[test]
-    fn persistent_annotation_replaces_regular_background() {
-        let colors = Colors::DEFAULT_BRIGHT;
-        let annotations = [PersistentHighlight::new(3, 2..5, Color32::LIGHT_YELLOW)];
-        assert_eq!(
-            update_for_highlight(
-                3,
-                3,
-                Some(Color32::LIGHT_BLUE),
-                &colors,
-                &None,
-                &annotations
-            ),
-            Some(Color32::LIGHT_YELLOW),
-        );
-    }
 }
 
 #[inline]
@@ -1941,7 +1905,7 @@ pub fn draw_border(
             bottom,
             TextDecorationStyle::Solid,
             stroke_width,
-            &color,
+            color,
         );
     }
     if draw_right {
@@ -1952,7 +1916,7 @@ pub fn draw_border(
             bottom,
             TextDecorationStyle::Solid,
             stroke_width,
-            &color,
+            color,
         );
     }
     if draw_top {
@@ -1963,7 +1927,7 @@ pub fn draw_border(
             top,
             TextDecorationStyle::Solid,
             stroke_width,
-            &color,
+            color,
         );
     }
     if draw_bottom {
@@ -1974,7 +1938,7 @@ pub fn draw_border(
             bottom,
             TextDecorationStyle::Solid,
             stroke_width,
-            &color,
+            color,
         );
     }
 }
@@ -1996,7 +1960,7 @@ pub fn draw_rect(cairo: &CairoContext, rect: &Rect, stroke_width: f32, color: &C
 #[inline]
 pub fn handle_cairo<T>(result: Result<T, cairo::Error>) {
     if let Err(err) = result {
-        eprintln!("Failed cairo call: {}", err.to_string());
+        eprintln!("Failed cairo call: {}", err);
     }
 }
 
@@ -2027,14 +1991,14 @@ fn draw_char(
 ) {
     match draw_data {
         CharDrawData::Outline(data) => {
-            data.draw(cairo, position.x, position.y, &color);
+            data.draw(cairo, position.x, position.y, color);
         }
         CharDrawData::Pango(data) => {
             data.draw(
                 cairo,
                 position.x,
                 position.y,
-                &color,
+                color,
                 font_family_names.as_ref(),
                 layout,
             );
@@ -2050,7 +2014,7 @@ fn get_font_family_names<'a>(
 ) -> Option<&'a str> {
     if let Some(idx) = font_family_idx {
         if let Some(names) = font_family_names {
-            names.get_index(*idx as usize).map_or(None, |str| Some(str))
+            names.get_index(*idx as usize).map(String::as_str)
         } else {
             None
         }
@@ -2075,5 +2039,45 @@ pub fn make_render_range(
             range.start == decoration_range.start,
             range.end == decoration_range.end,
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{PersistentHighlight, update_for_highlight};
+    use crate::color::{Color32, Colors};
+    use crate::controller::{HighlightInfo, HighlightMode};
+
+    #[test]
+    fn temporary_selection_wins_over_persistent_annotation() {
+        let colors = Colors::DEFAULT_BRIGHT;
+        let annotations = [PersistentHighlight::new(3, 2..5, Color32::LIGHT_YELLOW)];
+        let selection = Some(HighlightInfo {
+            line: 3,
+            start: 2,
+            end: 5,
+            mode: HighlightMode::Selection("text".into(), 3),
+        });
+        assert_eq!(
+            update_for_highlight(3, 3, None, &colors, &selection, &annotations),
+            Some(colors.highlight_background),
+        );
+    }
+
+    #[test]
+    fn persistent_annotation_replaces_regular_background() {
+        let colors = Colors::DEFAULT_BRIGHT;
+        let annotations = [PersistentHighlight::new(3, 2..5, Color32::LIGHT_YELLOW)];
+        assert_eq!(
+            update_for_highlight(
+                3,
+                3,
+                Some(Color32::LIGHT_BLUE),
+                &colors,
+                &None,
+                &annotations
+            ),
+            Some(Color32::LIGHT_YELLOW),
+        );
     }
 }

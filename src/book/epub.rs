@@ -1,11 +1,11 @@
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use elsa::FrozenMap;
 use indexmap::IndexSet;
 use serde_derive::Deserialize;
 use std::borrow::Cow;
 use std::cell::RefCell;
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::fs;
 use std::io::Cursor;
 use std::io::Read;
@@ -89,24 +89,21 @@ impl<R: Read + Seek> EpubZipArchive<R> {
 impl<R: Read + Seek> EpubArchive for EpubZipArchive<R> {
     #[inline]
     fn is_encrypted(&self) -> bool {
-        let encrypted = self.zip
+        self.zip
             .borrow()
             .file_names()
-            .find(|f| *f == "META-INF/encryption.xml")
-            .is_some();
-        encrypted
+            .any(|name| name.is_ok_and(|name| name == "META-INF/encryption.xml"))
     }
 
     fn content(&self, path: &str) -> Result<Vec<u8>> {
-        let result = match self.zip.borrow_mut().by_name(path) {
+        match self.zip.borrow_mut().by_name(path) {
             Ok(mut file) => {
                 let mut buf = vec![];
                 file.read_to_end(&mut buf)?;
                 Ok(buf)
             }
-            Err(e) => Err(anyhow!("failed load {}: {}", path, e.to_string())),
-        };
-        result
+            Err(e) => Err(anyhow!("failed load {}: {}", path, e)),
+        }
     }
 
     fn exists(&self, path: &str) -> bool {
@@ -137,7 +134,7 @@ impl EpubExtractedArchive {
 
     #[inline]
     fn target(&self, path: &str) -> PathBuf {
-        let names = path.split(|c| c == '/');
+        let names = path.split('/');
         let mut target = self.root.clone();
         for name in names {
             target.push(name);
@@ -316,14 +313,12 @@ impl Book for EpubBook {
                 let np = &toc[toc_index];
                 match &np.src_file {
                     Some(src_file) if chapter_href == src_file => {
-                        if let Some(anchor) = &np.src_anchor {
-                            if let Some(position) = c.id_position(anchor) {
-                                if position.line > line
-                                    || (position.line == line && position.offset > offset)
-                                {
-                                    break;
-                                }
-                            }
+                        if let Some(anchor) = &np.src_anchor
+                            && let Some(position) = c.id_position(anchor)
+                            && (position.line > line
+                                || (position.line == line && position.offset > offset))
+                        {
+                            break;
                         }
                         file_matched = Some(toc_index);
                     }
@@ -362,7 +357,7 @@ impl Book for EpubBook {
 
     #[inline]
     fn lines(&self) -> &Vec<Line> {
-        &self.chapter_cache.get(&self.chapter_index).unwrap().lines()
+        self.chapter_cache.get(&self.chapter_index).unwrap().lines()
     }
 
     fn link_position(&mut self, line: usize, link_index: usize) -> Option<TraceInfo> {
@@ -375,10 +370,7 @@ impl Book for EpubBook {
 
         let mut target_split = link_target.split('#');
         let target_file = target_split.next()?;
-        let target_anchor = target_split
-            .next()
-            .and_then(|a| Some(String::from(a)))
-            .or(None);
+        let target_anchor = target_split.next().map(String::from).or(None);
         if target_file.is_empty() {
             self.target_position(None, target_anchor)
         } else {
@@ -632,11 +624,11 @@ impl EpubBook {
         }
         let container_text = archive.string("META-INF/container.xml")?;
         let container = quick_xml::de::from_str::<EpubContainer>(&container_text)
-            .map_err(|e| anyhow!("Malformatted container.xml file: {}", e.to_string()))?;
+            .map_err(|e| anyhow!("Malformatted container.xml file: {}", e))?;
         let content_opf_path = &container
             .rootfiles
             .rootfile
-            .get(0)
+            .first()
             .ok_or(anyhow!("invalid container.xml: no rootfile"))?
             .full_path;
         let content_opf_dir = match PathBuf::from(content_opf_path.as_ref()).parent() {
@@ -645,7 +637,7 @@ impl EpubBook {
         };
         let content_opf_text = archive.string(content_opf_path)?;
         let content_opf = quick_xml::de::from_str::<EpubContentOpf>(&content_opf_text)
-            .map_err(|e| anyhow!("Malformatted content.opf file: {}", e.to_string()))?;
+            .map_err(|e| anyhow!("Malformatted content.opf file: {}", e))?;
         let content_opf = setup_content_opf(content_opf, &content_opf_dir, archive.as_ref())?;
 
         let mut toc = match content_opf
@@ -659,14 +651,14 @@ impl EpubBook {
             }
             None => {
                 let mut toc = None;
-                for (_id, item) in &content_opf.manifest {
-                    if let Some(properties) = &item.properties {
-                        if properties.contains("nav") {
-                            let nav_text = archive.string(&item.href)?;
-                            let cwd = path_cwd(&item.href);
-                            toc = Some(parse_nav_doc(&nav_text, &cwd)?);
-                            break;
-                        }
+                for item in content_opf.manifest.values() {
+                    if let Some(properties) = &item.properties
+                        && properties.contains("nav")
+                    {
+                        let nav_text = archive.string(&item.href)?;
+                        let cwd = path_cwd(&item.href);
+                        toc = Some(parse_nav_doc(&nav_text, &cwd)?);
+                        break;
                     }
                 }
                 toc.ok_or(anyhow!("Invalid content.opf file, no ncx or nav"))?
@@ -726,7 +718,7 @@ impl EpubBook {
                 if full_path.to_lowercase().ends_with(".xhtml") {
                     html_str = xhtml_to_html(&html_str)?;
                 }
-                let mut resolve = EpubResolver {
+                let resolve = EpubResolver {
                     cwd,
                     archive: self.archive.as_ref(),
                     css_cache: &self.css_cache,
@@ -736,7 +728,7 @@ impl EpubBook {
                 let (html_content, mut font_faces) = html_parser::parse(
                     HtmlParseOptions::new(&html_str)
                         .with_font_family(&mut self.font_families)
-                        .with_resolver(&mut resolve),
+                        .with_resolver(&resolve),
                 )?;
                 #[cfg(feature = "gui")]
                 {
@@ -762,14 +754,14 @@ impl EpubBook {
             chapter: &Chapter,
             target_anchor: &Option<String>,
         ) -> Option<TraceInfo> {
-            if let Some(anchor) = target_anchor {
-                if let Some(position) = chapter.id_position(anchor) {
-                    return Some(TraceInfo {
-                        chapter: chapter_index,
-                        line: position.line,
-                        offset: position.offset,
-                    });
-                }
+            if let Some(anchor) = target_anchor
+                && let Some(position) = chapter.id_position(anchor)
+            {
+                return Some(TraceInfo {
+                    chapter: chapter_index,
+                    line: position.line,
+                    offset: position.offset,
+                });
             }
             None
         }
@@ -817,7 +809,7 @@ fn setup_nav_points(
         let src_file = src_split.next()?;
         let src_file = concat_path_str(cwd.clone(), src_file)?;
         let src_file = Some(src_file);
-        let src_anchor = src_split.next().and_then(|str| Some(String::from(str)));
+        let src_anchor = src_split.next().map(String::from);
         Some(NavPoint {
             id,
             label,
@@ -829,7 +821,7 @@ fn setup_nav_points(
         })
     }
     for point in nav_points_element {
-        if let Some(p) = setup_point(point, level, &cwd) {
+        if let Some(p) = setup_point(point, level, cwd) {
             nav_points.push(p);
             if let Some(points) = &point.nav_points {
                 setup_nav_points(points, level + 1, nav_points, cwd)
@@ -839,12 +831,12 @@ fn setup_nav_points(
 }
 
 fn parse_ncx(text: &str, cwd: &PathBuf) -> Result<Vec<NavPoint>> {
-    let ncx: EpubContentNcx = quick_xml::de::from_str(text)
-        .map_err(|e| anyhow!("Failed parse ncx: {}", e.to_string()))?;
+    let ncx: EpubContentNcx =
+        quick_xml::de::from_str(text).map_err(|e| anyhow!("Failed parse ncx: {}", e))?;
 
     let mut nav_points = vec![];
     setup_nav_points(&ncx.nav_map.nav_points, 1, &mut nav_points, cwd);
-    if nav_points.len() == 0 {
+    if nav_points.is_empty() {
         Err(anyhow!("No NavPoints found"))
     } else {
         Ok(nav_points)
@@ -875,7 +867,7 @@ fn parse_nav_doc(text: &str, cwd: &PathBuf) -> Result<Vec<NavPoint>> {
             } else {
                 tag.text
             };
-            if label.len() == 0 {
+            if label.is_empty() {
                 bail!("Navigation document entry with empty text");
             }
             let (src_file, src_anchor) = if let Some(href) = tag.href {
@@ -917,7 +909,7 @@ fn parse_nav_doc(text: &str, cwd: &PathBuf) -> Result<Vec<NavPoint>> {
             break;
         }
     }
-    if toc.len() == 0 {
+    if toc.is_empty() {
         Err(anyhow!("Navigation document with no entries"))
     } else {
         Ok(toc)
@@ -952,10 +944,10 @@ fn setup_spine(
     let mut chapters = vec![];
     for item in spine.itemrefs {
         let id = item.idref.to_string();
-        if let Some(item) = manifest.get(&id) {
-            if archive.exists(&item.href as &str) {
-                chapters.push(id);
-            }
+        if let Some(item) = manifest.get(&id)
+            && archive.exists(&item.href as &str)
+        {
+            chapters.push(id);
         }
     }
     let toc_id = spine.toc.map(|toc| toc.to_string());
@@ -970,10 +962,10 @@ fn setup_content_opf(
     let title = opf
         .metadata
         .title
-        .get(0)
+        .first()
         .ok_or(anyhow!("No title defined"))?
         .to_string();
-    let author = opf.metadata.creator.get(0).map(|a| a.to_string());
+    let author = opf.metadata.creator.first().map(|a| a.to_string());
     let language = opf
         .metadata
         .language
@@ -993,14 +985,13 @@ fn setup_content_opf(
 }
 
 fn toc_title(nav_point: &NavPoint) -> &str {
-    let label = match &nav_point.label {
+    (match &nav_point.label {
         Some(label) => label,
         None => match &nav_point.src_file {
             Some(src_file) => src_file,
             None => "blank",
         },
-    };
-    label
+    }) as _
 }
 
 fn chapter_path(chapter_index: usize, content_opf: &ContentOPF) -> Result<&str> {

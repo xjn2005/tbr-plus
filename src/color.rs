@@ -136,13 +136,13 @@ impl Color32 {
 }
 
 #[cfg(feature = "gui")]
-impl Into<RGBA> for Color32 {
-    fn into(self) -> RGBA {
+impl From<Color32> for RGBA {
+    fn from(val: Color32) -> Self {
         RGBA::new(
-            self.r() as f32 / 255.,
-            self.g() as f32 / 255.,
-            self.b() as f32 / 255.,
-            self.a() as f32 / 255.,
+            val.r() as f32 / 255.,
+            val.g() as f32 / 255.,
+            val.b() as f32 / 255.,
+            val.a() as f32 / 255.,
         )
     }
 }

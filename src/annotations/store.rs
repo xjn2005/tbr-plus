@@ -1,8 +1,8 @@
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use anyhow::{bail, Result};
-use rusqlite::{params, Connection, Params, Transaction};
+use anyhow::{Result, bail};
+use rusqlite::{Connection, Params, Transaction, params};
 
 use super::anchor::Anchor;
 use super::model::{Annotation, AnnotationColor, AnnotationStatus, BookId, NewAnnotation};
@@ -220,6 +220,29 @@ where book_id = ?
 order by created_at, annotation_id
 	",
             [book_id.as_bytes().as_slice()],
+        )
+    }
+
+    #[cfg(test)]
+    pub fn list_for_chapter(
+        &self,
+        book_id: &BookId,
+        inner_book: usize,
+        chapter: usize,
+    ) -> Result<Vec<Annotation>> {
+        self.list(
+            "
+select annotation_id, inner_book, chapter, line, start_char, end_line, end_char,
+       quote, prefix, suffix, color, note, starred, status, created_at, updated_at
+from annotations
+where book_id = ? and inner_book = ? and chapter = ?
+order by line, start_char, created_at, annotation_id
+",
+            params![
+                book_id.as_bytes().as_slice(),
+                inner_book as i64,
+                chapter as i64
+            ],
         )
     }
 
