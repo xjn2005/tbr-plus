@@ -22,6 +22,7 @@ gui = [
     "dep:resvg",
     "dep:fontdb",
     "dep:ouroboros",
+    "dep:glib-unix",
 ]
 i18n = ["dep:fluent", "dep:unic-langid", "dep:sys-locale"]
 dict = ["dep:stardict", "dep:html-escape"]
@@ -34,6 +35,7 @@ rusqlite = { version = "0.31", features = ["bundled"] }
 [target.'cfg(unix)'.dependencies]
 cursive = { version = "0.20", default-features = false, features = ["crossterm-backend", "toml"] }
 rusqlite = { version = "0.31" }
+glib-unix = { version = "0.22", optional = true }
 
 [build-dependencies]
 winres = "0.1"

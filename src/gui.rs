@@ -2816,7 +2816,7 @@ pub fn start(
 
 #[cfg(unix)]
 fn handle_signal(signum: i32, app: Application) {
-    glib::unix_signal_add_local_once(signum, move || {
+    glib_unix::unix_signal_add_local_once(signum, move || {
         for win in app.windows() {
             win.close();
         }
