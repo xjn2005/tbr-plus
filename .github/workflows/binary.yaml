@@ -28,29 +28,29 @@ jobs:
         id: msys2
         uses: msys2/setup-msys2@e9898307ac31d1a803454791be09ab9973336e1c # v2.31.1
         with:
-          msystem: MINGW64
+          msystem: CLANG64
           update: true
           install: >-
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-gtk4
-            mingw-w64-x86_64-pkgconf
+            mingw-w64-clang-x86_64-clang
+            mingw-w64-clang-x86_64-gtk4
+            mingw-w64-clang-x86_64-pkgconf
 
       - name: Add GTK toolchain to PATH
         shell: pwsh
         run: |
-          $mingw = "${{ steps.msys2.outputs.msys2-location }}\mingw64"
-          $mingwBin = "$mingw\bin"
-          $mingwPkgConfig = "$mingw\lib\pkgconfig"
-          $mingwBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          "PKG_CONFIG_PATH=$mingwPkgConfig" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $clang = "${{ steps.msys2.outputs.msys2-location }}\clang64"
+          $clangBin = "$clang\bin"
+          $clangPkgConfig = "$clang\lib\pkgconfig"
+          $clangBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          "PKG_CONFIG_PATH=$clangPkgConfig" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-pc-windows-gnu
+          targets: x86_64-pc-windows-gnullvm
 
       - name: Build
-        run: cargo build --release --target x86_64-pc-windows-gnu
+        run: cargo build --release --target x86_64-pc-windows-gnullvm
 
       - name: Get version
         id: version
@@ -75,17 +75,17 @@ jobs:
           $bundle = Join-Path $PWD $env:BUNDLE_NAME
           $bundleBin = Join-Path $bundle "bin"
           $bundleLib = Join-Path $bundle "lib"
-          $mingw = Join-Path $env:MSYS2_ROOT "mingw64"
-          $mingwBin = Join-Path $mingw "bin"
+          $clang = Join-Path $env:MSYS2_ROOT "clang64"
+          $clangBin = Join-Path $clang "bin"
           New-Item -ItemType Directory -Path $bundle
           New-Item -ItemType Directory -Path $bundleBin
           New-Item -ItemType Directory -Path $bundleLib
-          Copy-Item "target\x86_64-pc-windows-gnu\release\tbr-plus.exe" $bundleBin
-          Copy-Item "$mingwBin\*.dll" $bundleBin
-          Copy-Item (Join-Path $mingwBin "gdk-pixbuf-query-loaders.exe") $bundleBin
-          Copy-Item (Join-Path $mingw "lib\gdk-pixbuf-2.0") $bundleLib -Recurse
-          Copy-Item (Join-Path $mingw "share") $bundle -Recurse
-          Copy-Item (Join-Path $mingw "etc") $bundle -Recurse
+          Copy-Item "target\x86_64-pc-windows-gnullvm\release\tbr-plus.exe" $bundleBin
+          Copy-Item "$clangBin\*.dll" $bundleBin
+          Copy-Item (Join-Path $clangBin "gdk-pixbuf-query-loaders.exe") $bundleBin
+          Copy-Item (Join-Path $clang "lib\gdk-pixbuf-2.0") $bundleLib -Recurse
+          Copy-Item (Join-Path $clang "share") $bundle -Recurse
+          Copy-Item (Join-Path $clang "etc") $bundle -Recurse
           $launcher = @(
             '@echo off'
             'setlocal'
