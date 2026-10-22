@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version'
+        description: "Existing tag to publish"
         required: true
-        default: 'v1.0.0'
+        default: "v2.4.3"
 
 permissions:
   contents: write
@@ -17,118 +17,148 @@ permissions:
 jobs:
   build-win:
     runs-on: windows-latest
-    env:
-      PKG_CONFIG_PATH: 'C:\gnome\lib\pkgconfig'
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-
-      - uses: actions/cache@v4
-        id: cache
         with:
-          path: c:/gnome
-          key: ${{ runner.os }}-gtk4-14.2
-          restore-keys: |
-            ${{ runner.os }}-gtk4-14.2
+          ref: ${{ github.event.inputs.version || github.ref }}
 
-      - name: Set up the PATH environment
-        run: |
-          echo "C:\pkg-config-lite-0.28-1\bin" >> $GITHUB_PATH
-          echo "C:\gnome\bin" >> $GITHUB_PATH
-        shell: bash
-
-      - name: Download pkgconfig-lite
-        uses: suisei-cn/actions-download-file@818d6b7dc8fe73f2f924b6241f2b1134ca1377d9 # 1.6.0
-        id: pkgconfig-lite  # Remember to give an ID if you need the output filename
+      - name: Install GTK
+        id: msys2
+        uses: msys2/setup-msys2@e9898307ac31d1a803454791be09ab9973336e1c # v2.31.1
         with:
-          url: "https://deac-fra.dl.sourceforge.net/project/pkgconfiglite/0.28-1/pkg-config-lite-0.28-1_bin-win32.zip"
-          target: /pkg_config_tmp
-          filename: pkg_config_lite.zip
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-gtk4
+            mingw-w64-x86_64-pkgconf
 
-      #          Invoke-WebRequest -Uri https://deac-fra.dl.sourceforge.net/project/pkgconfiglite/0.28-1/pkg-config-lite-0.28-1_bin-win32.zip -OutFile /pkg_config_lite.zip -MaximumRetryCount 5
-      - name: Install pkgconfig-lite
+      - name: Add GTK toolchain to PATH
+        shell: pwsh
         run: |
-          mv /pkg_config_tmp/pkg_config_lite.zip /
-          Expand-Archive /pkg_config_lite.zip -DestinationPath C:\
-          ls C:\
-          ls C:\pkg-config-lite-0.28-1
-          ls C:\pkg-config-lite-0.28-1\bin
-          pkg-config --version
+          $mingw = "${{ steps.msys2.outputs.msys2-location }}\mingw64"
+          $mingwBin = "$mingw\bin"
+          $mingwPkgConfig = "$mingw\lib\pkgconfig"
+          $mingwBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          "PKG_CONFIG_PATH=$mingwPkgConfig" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Clone GTK
-        working-directory: /
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          git clone https://gitlab.gnome.org/GNOME/gtk.git --depth 1
-
-      - name: Setup Python
-        uses: actions/setup-python@v7
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
         with:
-          python-version: "3.x"
-
-      - name: Install Python Dependencies
-        run: pip install meson ninja setuptools packaging
-
-      - name: Setup MSVC
-        uses: bus1/cabuild/action/msdevshell@v1
-        with:
-          architecture: x64
-
-      - name: Prepare GTK build
-        working-directory: /gtk
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          meson setup builddir --prefix=C:/gnome -Dbackend_max_links=1 -Dbuild-demos=false -Dbuild-tests=false -Dvulkan=disabled -Dmedia-gstreamer=disabled -Dbuild-examples=false -Dglib:tests=false -Dharfbuzz:tests=disabled -Dharfbuzz:docs=disabled -Dgraphene:tests=false -Dgdk-pixbuf:tests=false -Dcairo:tests=disabled
-
-      - name: Build and install GTK
-        working-directory: /gtk
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          meson install -C builddir
-
-      - uses: dtolnay/rust-toolchain@stable
+          targets: x86_64-pc-windows-gnu
 
       - name: Build
-        run: cargo build --release
+        run: cargo build --release --target x86_64-pc-windows-gnu
 
       - name: Get version
         id: version
-        shell: bash
+        shell: pwsh
+        env:
+          VERSION_INPUT: ${{ github.event.inputs.version }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          if [ "${{ github.event.inputs.version }}" == "" ]; then
-            echo "ver=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-            echo "name=tbr-plus-windows-amd64-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "ver=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
-            echo "name=tbr-plus-windows-amd64-${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
-          fi
+          $version = $env:VERSION_INPUT
+          if (-not $version) {
+            $version = $env:REF_NAME
+          }
+          "ver=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "name=tbr-plus-windows-amd64-$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
-      - name: Copy
+      - name: Package
+        shell: pwsh
+        env:
+          BUNDLE_NAME: ${{ steps.version.outputs.name }}
+          MSYS2_ROOT: ${{ steps.msys2.outputs.msys2-location }}
         run: |
-          mkdir "${{ steps.version.outputs.name }}"
-          cp target/release/tbr-plus.exe "${{ steps.version.outputs.name }}"
-          cp -r c:/gnome/bin/*.dll "${{ steps.version.outputs.name }}"
+          $bundle = Join-Path $PWD $env:BUNDLE_NAME
+          $bundleBin = Join-Path $bundle "bin"
+          $bundleLib = Join-Path $bundle "lib"
+          $mingw = Join-Path $env:MSYS2_ROOT "mingw64"
+          $mingwBin = Join-Path $mingw "bin"
+          New-Item -ItemType Directory -Path $bundle
+          New-Item -ItemType Directory -Path $bundleBin
+          New-Item -ItemType Directory -Path $bundleLib
+          Copy-Item "target\x86_64-pc-windows-gnu\release\tbr-plus.exe" $bundleBin
+          Copy-Item "$mingwBin\*.dll" $bundleBin
+          Copy-Item (Join-Path $mingwBin "gdk-pixbuf-query-loaders.exe") $bundleBin
+          Copy-Item (Join-Path $mingw "lib\gdk-pixbuf-2.0") $bundleLib -Recurse
+          Copy-Item (Join-Path $mingw "share") $bundle -Recurse
+          Copy-Item (Join-Path $mingw "etc") $bundle -Recurse
+          $launcher = @(
+            '@echo off'
+            'setlocal'
+            'set "TBR_ROOT=%~dp0"'
+            'set "PATH=%TBR_ROOT%bin;%SystemRoot%\System32;%SystemRoot%"'
+            'set "GDK_PIXBUF_MODULEDIR=%TBR_ROOT%lib\gdk-pixbuf-2.0\2.10.0\loaders"'
+            'set "TBR_LOADER_CACHE=%TEMP%\tbr-plus-gdk-pixbuf-loaders-%RANDOM%.cache"'
+            'set "GDK_PIXBUF_MODULE_FILE=%TBR_LOADER_CACHE%"'
+            '"%TBR_ROOT%bin\gdk-pixbuf-query-loaders.exe" > "%TBR_LOADER_CACHE%"'
+            'if errorlevel 1 exit /b %errorlevel%'
+            '"%TBR_ROOT%bin\tbr-plus.exe" %*'
+            'set "TBR_EXIT=%ERRORLEVEL%"'
+            'del "%TBR_LOADER_CACHE%" >nul 2>&1'
+            'exit /b %TBR_EXIT%'
+          )
+          $launcher | Set-Content (Join-Path $bundle "tbr-plus.cmd") -Encoding ascii
+
+      - name: Smoke test packaged application
+        shell: pwsh
+        env:
+          BUNDLE_NAME: ${{ steps.version.outputs.name }}
+          MSYS2_ROOT: ${{ steps.msys2.outputs.msys2-location }}
+        run: |
+          $bundle = Join-Path $PWD $env:BUNDLE_NAME
+          $launcher = Join-Path $bundle "tbr-plus.cmd"
+          $smokeTemp = Join-Path $env:RUNNER_TEMP "tbr-plus-smoke"
+          $previousPath = $env:PATH
+          $previousTemp = $env:TEMP
+          $process = $null
+          try {
+            New-Item -ItemType Directory -Path $smokeTemp
+            $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
+            $env:TEMP = $smokeTemp
+            $process = Start-Process -FilePath "$env:SystemRoot\System32\cmd.exe" -ArgumentList "/d /c `"$launcher`"" -WorkingDirectory $bundle -PassThru
+            Start-Sleep -Seconds 5
+            if ($process.HasExited) {
+              throw "Packaged application exited during startup with code $($process.ExitCode)"
+            }
+            $loaderCache = Get-ChildItem $smokeTemp -Filter "tbr-plus-gdk-pixbuf-loaders-*.cache" | Select-Object -First 1
+            if (-not $loaderCache) {
+              throw "Packaged application did not generate a GdkPixbuf loader cache"
+            }
+            $loaderCacheContent = Get-Content -Raw $loaderCache.FullName
+            if ($loaderCacheContent -match [regex]::Escape($env:MSYS2_ROOT)) {
+              throw "GdkPixbuf loader cache still references the runner's MSYS2 installation"
+            }
+            if ($loaderCacheContent -notmatch [regex]::Escape($bundle)) {
+              throw "GdkPixbuf loader cache does not reference the packaged loaders"
+            }
+          } finally {
+            if ($process -and -not $process.HasExited) {
+              & "$env:SystemRoot\System32\taskkill.exe" /PID $process.Id /T /F *> $null
+            }
+            $env:PATH = $previousPath
+            $env:TEMP = $previousTemp
+          }
 
       - name: Zip
-        uses: thedoctor0/zip-release@0.7.1
-        with:
-          type: 'zip'
-          filename: "${{ steps.version.outputs.name }}.zip"
-          path: "${{ steps.version.outputs.name }}"
+        shell: pwsh
+        env:
+          BUNDLE_NAME: ${{ steps.version.outputs.name }}
+        run: Compress-Archive -Path $env:BUNDLE_NAME -DestinationPath "$env:BUNDLE_NAME.zip"
 
-      - name: Release bundle
-        uses: ncipollo/release-action@v1.12.0
-        with:
-          tag: "${{ steps.version.outputs.ver }}"
-          allowUpdates: true
-          token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts: "${{ steps.version.outputs.name }}.zip"
-
-#      - name: Release
-#        uses: softprops/action-gh-release@v1
-#        with:
-#          tag_name: "${{ steps.version.outputs.ver }}"
-#          files: target/release/tbr.exe
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.version.outputs.ver }}
+          RELEASE_ARCHIVE: ${{ steps.version.outputs.name }}.zip
+        run: |
+          gh release view $env:RELEASE_TAG *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $env:RELEASE_TAG $env:RELEASE_ARCHIVE --clobber
+          } else {
+            gh release create $env:RELEASE_TAG $env:RELEASE_ARCHIVE --verify-tag --generate-notes --title $env:RELEASE_TAG
+          }
