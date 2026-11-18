@@ -1,9 +1,8 @@
 use anyhow::{Result, anyhow, bail};
-use elsa::FrozenMap;
+use elsa::sync::FrozenMap;
 use indexmap::IndexSet;
 use serde_derive::Deserialize;
 use std::borrow::Cow;
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::fs;
@@ -12,6 +11,7 @@ use std::io::Read;
 use std::io::Seek;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::{Mutex, MutexGuard};
 use zip::ZipArchive;
 
 #[cfg(feature = "gui")]
@@ -64,41 +64,46 @@ struct NavPoint {
 
 type Chapter = HtmlContent;
 
-trait EpubArchive {
-    fn is_encrypted(&self) -> bool;
+trait EpubArchive: Send + Sync {
+    fn is_encrypted(&self) -> Result<bool>;
     fn content(&self, path: &str) -> Result<Vec<u8>>;
     fn string(&self, path: &str) -> Result<String> {
-        let buf = self.content(path)?;
-        Ok(String::from_utf8(buf)?)
+        Ok(String::from_utf8(self.content(path)?)?)
     }
-    fn exists(&self, path: &str) -> bool;
+    fn exists(&self, path: &str) -> Result<bool>;
 }
 
-struct EpubZipArchive<R: Read + Seek> {
-    zip: RefCell<ZipArchive<R>>,
+struct EpubZipArchive<R: Read + Seek + Send> {
+    zip: Mutex<ZipArchive<R>>,
 }
 
-impl<R: Read + Seek> EpubZipArchive<R> {
+impl<R: Read + Seek + Send> EpubZipArchive<R> {
     #[inline]
     fn new(reader: R) -> Result<Self> {
         let zip = ZipArchive::new(reader)?;
         Ok(EpubZipArchive {
-            zip: RefCell::new(zip),
+            zip: Mutex::new(zip),
         })
+    }
+
+    fn zip(&self) -> Result<MutexGuard<'_, ZipArchive<R>>> {
+        self.zip
+            .lock()
+            .map_err(|_| anyhow!("EPUB archive lock poisoned"))
     }
 }
 
-impl<R: Read + Seek> EpubArchive for EpubZipArchive<R> {
+impl<R: Read + Seek + Send> EpubArchive for EpubZipArchive<R> {
     #[inline]
-    fn is_encrypted(&self) -> bool {
-        self.zip
-            .borrow()
+    fn is_encrypted(&self) -> Result<bool> {
+        Ok(self
+            .zip()?
             .file_names()
-            .any(|name| name.is_ok_and(|name| name == "META-INF/encryption.xml"))
+            .any(|name| name.is_ok_and(|name| name == "META-INF/encryption.xml")))
     }
 
     fn content(&self, path: &str) -> Result<Vec<u8>> {
-        match self.zip.borrow_mut().by_name(path) {
+        match self.zip()?.by_name(path) {
             Ok(mut file) => {
                 let mut buf = vec![];
                 file.read_to_end(&mut buf)?;
@@ -108,8 +113,8 @@ impl<R: Read + Seek> EpubArchive for EpubZipArchive<R> {
         }
     }
 
-    fn exists(&self, path: &str) -> bool {
-        self.zip.borrow().index_for_name(path).is_some()
+    fn exists(&self, path: &str) -> Result<bool> {
+        Ok(self.zip()?.index_for_name(path).is_some())
     }
 }
 
@@ -147,7 +152,7 @@ impl EpubExtractedArchive {
 
 impl EpubArchive for EpubExtractedArchive {
     #[inline]
-    fn is_encrypted(&self) -> bool {
+    fn is_encrypted(&self) -> Result<bool> {
         self.exists("META-INF/encryption.xml")
     }
 
@@ -162,8 +167,8 @@ impl EpubArchive for EpubExtractedArchive {
     }
 
     #[inline]
-    fn exists(&self, path: &str) -> bool {
-        self.target(path).exists()
+    fn exists(&self, path: &str) -> Result<bool> {
+        Ok(self.target(path).exists())
     }
 }
 
@@ -624,7 +629,7 @@ impl EpubBook {
         loading_chapter: LoadingChapter,
         custom_style: &Option<String>,
     ) -> Result<Self> {
-        if archive.is_encrypted() {
+        if archive.is_encrypted()? {
             return Err(anyhow!("Encrypted epub."));
         }
         let container_text = archive.string("META-INF/container.xml")?;
@@ -946,18 +951,18 @@ fn setup_spine(
     spine: EpubContentOpfSpine,
     manifest: &Manifest,
     archive: &dyn EpubArchive,
-) -> (Spine, Option<String>) {
+) -> Result<(Spine, Option<String>)> {
     let mut chapters = vec![];
     for item in spine.itemrefs {
         let id = item.idref.to_string();
         if let Some(item) = manifest.get(&id)
-            && archive.exists(&item.href as &str)
+            && archive.exists(&item.href)?
         {
             chapters.push(id);
         }
     }
     let toc_id = spine.toc.map(|toc| toc.to_string());
-    (chapters, toc_id)
+    Ok((chapters, toc_id))
 }
 
 fn setup_content_opf(
@@ -979,7 +984,7 @@ fn setup_content_opf(
         .to_string();
 
     let manifest = setup_manifest(opf.manifest, content_opf_dir);
-    let (spine, toc_id) = setup_spine(opf.spine, &manifest, archive);
+    let (spine, toc_id) = setup_spine(opf.spine, &manifest, archive)?;
     Ok(ContentOPF {
         title,
         author,

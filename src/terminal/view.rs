@@ -98,7 +98,7 @@ impl RenderContext {
     }
 }
 
-pub(super) trait TerminalRender: Render<RenderContext> {
+pub(super) trait TerminalRender: Render<RenderContext> + Send + Sync {
     fn resized(&mut self, _context: &RenderContext) {}
 
     fn setup_draw_char(
@@ -361,5 +361,17 @@ impl ReadingView {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod send_sync_tests {
+    use super::ReadingView;
+
+    fn assert_send_sync<T: Send + Sync>() {}
+
+    #[test]
+    fn reading_view_is_send_sync() {
+        assert_send_sync::<ReadingView>();
     }
 }

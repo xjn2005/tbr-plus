@@ -475,7 +475,7 @@ impl<'a> Listable for TocInfo<'a> {
     }
 }
 
-pub trait Book {
+pub trait Book: Send + Sync {
     #[inline]
     fn name(&self) -> Option<&str> {
         None
@@ -631,7 +631,7 @@ pub struct BookLoader {
     loaders: Vec<Box<dyn Loader>>,
 }
 
-pub(crate) trait Loader {
+pub(crate) trait Loader: Send + Sync {
     fn extensions(&self) -> &Vec<&'static str>;
     fn support(&self, filename: &str) -> bool {
         let filename = filename.to_lowercase();

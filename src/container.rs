@@ -73,12 +73,12 @@ impl ContainerManager {
     }
 }
 
-pub trait ContainerLoader {
+pub trait ContainerLoader: Send + Sync {
     fn accept(&self, filename: &str) -> bool;
     fn open(&self, filename: &str, book_loader: &BookLoader) -> Result<Box<dyn Container>>;
 }
 
-pub trait Container {
+pub trait Container: Send + Sync {
     fn filename(&self) -> &str;
     fn inner_book_names(&self) -> Option<&Vec<BookName>>;
     fn book_content(&mut self, inner_index: usize) -> Result<BookContent>;

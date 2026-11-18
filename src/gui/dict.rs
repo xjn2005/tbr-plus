@@ -13,7 +13,7 @@ use crate::gui::{
 use crate::html_parser::{HtmlContent, HtmlParseOptions};
 use crate::i18n::I18n;
 use crate::{html_parser, package_name};
-use elsa::FrozenMap;
+use elsa::sync::FrozenMap;
 use fancy_regex::{Captures, Regex};
 use gtk4::gdk::{Key, ModifierType};
 use gtk4::glib;
@@ -28,6 +28,7 @@ use std::cmp::max;
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::rc::Rc;
+use std::sync::Mutex;
 
 const HTML_DEFINITION_HEAD: &str = "
 <style type=\"text/css\">
@@ -61,8 +62,10 @@ pub(super) struct LookupResult {
     definitions: Vec<WordDefinition>,
 }
 
+type Dictionary = Mutex<Box<dyn StarDict + Send>>;
+
 pub(super) struct DictionaryBook {
-    dictionaries: Vec<Box<dyn StarDict>>,
+    dictionaries: Vec<Dictionary>,
     cache: HashMap<String, Vec<LookupResult>>,
     resources: FrozenMap<String, Vec<u8>>,
     replacer: Regex,
@@ -92,7 +95,7 @@ impl Book for DictionaryBook {
         }
 
         let (dict_name, href) = href.split_once(":")?;
-        for dict in &self.dictionaries {
+        for dict in self.dictionaries.iter().filter_map(|dict| dict.lock().ok()) {
             if dict.dict_name() == dict_name {
                 let bytes = dict.get_resource(href).ok()??;
                 let bytes = self.resources.insert(href.to_owned(), bytes);
@@ -106,7 +109,7 @@ impl Book for DictionaryBook {
 
 impl DictionaryBook {
     fn load_dictionaries(
-        dictionaries: &mut Vec<Box<dyn StarDict>>,
+        dictionaries: &mut Vec<Dictionary>,
         dictionary_paths: &Vec<PathConfig>,
         cache_dict: bool,
     ) {
@@ -114,11 +117,11 @@ impl DictionaryBook {
             if config.enabled {
                 if cache_dict && let Ok(dict) = stardict::with_sqlite(&config.path, package_name!())
                 {
-                    dictionaries.push(Box::new(dict));
+                    dictionaries.push(Mutex::new(Box::new(dict)));
                     continue;
                 }
                 if let Ok(dict) = stardict::no_cache(&config.path) {
-                    dictionaries.push(Box::new(dict));
+                    dictionaries.push(Mutex::new(Box::new(dict)));
                 }
             }
         }
@@ -202,11 +205,11 @@ impl DictionaryBook {
 pub fn word_at_offset(
     line: &Line,
     offset: usize,
-    dictionaries: &mut Vec<Box<dyn StarDict>>,
+    dictionaries: &mut Vec<Dictionary>,
     cache: &mut HashMap<String, Vec<LookupResult>>,
 ) -> Option<(usize, usize)> {
     fn exists(
-        dictionaries: &mut Vec<Box<dyn StarDict>>,
+        dictionaries: &mut Vec<Dictionary>,
         pattern: &str,
         cache: &mut HashMap<String, Vec<LookupResult>>,
     ) -> bool {
@@ -250,9 +253,12 @@ pub fn word_at_offset(
     line.word_at_offset(offset)
 }
 
-fn lookup_internal(dictionaries: &mut Vec<Box<dyn StarDict>>, word: &str) -> Vec<LookupResult> {
+fn lookup_internal(dictionaries: &mut Vec<Dictionary>, word: &str) -> Vec<LookupResult> {
     let mut result = vec![];
-    for dict in dictionaries {
+    for dict in dictionaries
+        .iter_mut()
+        .filter_map(|dict| dict.get_mut().ok())
+    {
         let dict_name = dict.dict_name().to_owned();
         if let Ok(Some(definitions)) = dict.lookup(word) {
             result.push(LookupResult {
