@@ -298,3 +298,45 @@ impl Render<RenderContext> for Han {
         Position::new(highlight_line, offset)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Han;
+    use crate::book::{Book, Line};
+    use crate::controller::Render;
+    use crate::terminal::view::{RenderContext, TerminalRender};
+
+    struct DummyBook {
+        lines: Vec<Line>,
+    }
+
+    impl Book for DummyBook {
+        fn lines(&self) -> &Vec<Line> {
+            &self.lines
+        }
+    }
+
+    #[test]
+    fn vertical_layout_preserves_cjk_order() {
+        let book = DummyBook {
+            lines: vec![Line::new("甲乙丙丁")],
+        };
+        let mut context = RenderContext {
+            width: 5,
+            height: 3,
+            print_lines: vec![],
+            leading_space: 0,
+        };
+        let mut han = Han::new();
+        han.resized(&context);
+
+        han.redraw(&book, book.lines(), 0, 0, &None, &mut context);
+        let rows = context
+            .print_lines
+            .iter()
+            .map(|row| row.iter().map(|draw| draw.char).collect::<String>())
+            .collect::<Vec<_>>();
+
+        assert_eq!(rows, vec!["丁 甲", "   乙", "   丙"]);
+    }
+}

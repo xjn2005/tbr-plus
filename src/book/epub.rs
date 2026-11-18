@@ -1066,3 +1066,40 @@ fn get_reading(loading: BookLoadingInfo) -> ReadingInfo {
         reading.custom_font = true;
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use anyhow::Result;
+
+    use crate::book::{BookLoader, LoadingChapter};
+    use crate::config::BookLoadingInfo;
+    use crate::container::BookContent;
+
+    #[test]
+    fn minimal_extracted_epub_loads_through_book_loader() -> Result<()> {
+        let filename = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/minimal_epub/META-INF/container.xml")
+            .to_string_lossy()
+            .replace('\\', "/");
+        let (book, _) = BookLoader::default().load(
+            &filename,
+            BookContent::File(filename.clone()),
+            LoadingChapter::Index(0),
+            BookLoadingInfo::NewReading(&filename, 0, 0, 16),
+        )?;
+
+        assert_eq!(book.name(), Some("Fixture EPUB"));
+        assert_eq!(book.chapter_count(), 1);
+        let text = book
+            .lines()
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(text.contains("第一章"));
+        assert!(text.contains("本地优先阅读。"));
+        let first_toc = book.toc_iterator().unwrap().next().unwrap();
+        assert_eq!(first_toc.title, "第一章");
+        Ok(())
+    }
+}

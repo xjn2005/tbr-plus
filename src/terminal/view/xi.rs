@@ -340,6 +340,32 @@ mod tests {
         }
     }
 
+    fn rendered_rows(context: &RenderContext) -> Vec<String> {
+        context
+            .print_lines
+            .iter()
+            .map(|row| row.iter().map(|draw| draw.char).collect())
+            .collect()
+    }
+
+    #[test]
+    fn horizontal_layout_preserves_cjk_order() {
+        let book = DummyBook {
+            lines: vec![Line::new("甲乙丙丁")],
+        };
+        let mut context = RenderContext {
+            width: 6,
+            height: 2,
+            print_lines: vec![],
+            leading_space: 0,
+        };
+        let mut xi = Xi::new();
+
+        xi.redraw(&book, book.lines(), 0, 0, &None, &mut context);
+
+        assert_eq!(rendered_rows(&context), vec!["甲乙丙", "丁    "]);
+    }
+
     fn to_draw_line(str: &str) -> Vec<DrawChar> {
         let mut line = vec![];
         for char in str.chars() {

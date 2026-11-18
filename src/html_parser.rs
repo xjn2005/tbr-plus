@@ -1462,3 +1462,27 @@ pub fn parse(options: HtmlParseOptions) -> Result<(HtmlContent, Vec<HtmlFontFace
         font_faces,
     ))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{HtmlParseOptions, parse};
+
+    #[test]
+    fn fixture_preserves_title_text_and_link() {
+        let html = include_str!("../tests/fixtures/reader_sample.html");
+        let (content, font_faces) = parse(HtmlParseOptions::new(html)).unwrap();
+        let lines = content
+            .lines()
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>();
+
+        assert!(font_faces.is_empty());
+        assert_eq!(content.title(), Some("Fixture"));
+        assert!(content.id_position("chapter").is_some());
+        assert_eq!(lines, vec!["第一章", "阅读链接"]);
+        let target =
+            content.lines()[1].link_iter(true, |link| (true, Some(link.target.to_owned())));
+        assert_eq!(target.as_deref(), Some("next.xhtml#start"));
+    }
+}

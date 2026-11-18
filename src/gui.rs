@@ -2848,3 +2848,16 @@ fn take_pending_library_jump(path: &str) -> Option<LibraryJump> {
 fn get_gc(gcs: &Vec<GuiContext>, filename: &str) -> core::result::Result<usize, usize> {
     gcs.binary_search_by(|gc| gc.ctrl().reading.filename.as_str().cmp(filename))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::load_icons;
+
+    #[test]
+    fn embedded_svg_icons_render() {
+        let icons = load_icons();
+        assert!(icons.contains_key("toc.svg"));
+        assert!(icons.contains_key("search.svg"));
+        assert!(icons.contains_key("chapter.svg"));
+    }
+}
