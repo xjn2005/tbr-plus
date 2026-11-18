@@ -304,8 +304,8 @@ fn setup_search_view(app: &mut Cursive) {
 
 fn setup_input_view<F, C>(app: &mut Cursive, prefix: &str, preset: &str, submit: F, cancel: C)
 where
-    F: Fn(&mut Cursive, Option<&str>) -> Result<()> + 'static,
-    C: Fn(&mut Cursive) + 'static,
+    F: Fn(&mut Cursive, Option<&str>) -> Result<()> + Send + Sync + 'static,
+    C: Fn(&mut Cursive) + Send + Sync + 'static,
 {
     let input_view = EditView::new().on_submit(move |app, str| {
         let pattern_len = str.len();

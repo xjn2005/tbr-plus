@@ -369,6 +369,7 @@ git commit -m "Make terminal reader state thread safe"
 **Files:**
 - Modify: `Cargo.toml`
 - Modify: `Cargo.lock`
+- Modify: `src/list.rs` and `src/terminal.rs`
 - Delete: `vendor/cursive-core/`
 - Delete: `vendor/safer-owning-ref/`
 
@@ -388,16 +389,16 @@ Verify the resolved targets are exactly `D:\tbr-plus\vendor\cursive-core` and `D
 
 ```powershell
 git rm -r vendor/cursive-core vendor/safer-owning-ref
-cargo update -p cursive -p cursive_core
+cargo update -p cursive
 ```
 
 Expected: Cargo resolves Cursive 0.21.1 and registry `cursive_core` 0.4.x; `owning_ref` disappears.
 
-- [ ] **Step 3: Verify the prepared source against Cursive 0.21**
+- [ ] **Step 3: Apply the callback bounds required by Cursive 0.21**
 
-Run: `cargo check --all-features`
+The first `cargo check --all-features` reported E0277 at `SelectView::on_submit`, `EditView::on_submit`, and `OnEventView::on_event`. Cursive 0.21 requires those callbacks to be `Send + Sync`. Add these bounds to `list_dialog`'s callback and both callbacks of `setup_input_view`.
 
-Expected: exit 0 because Task 3 already satisfies `View: Send + Sync` and the source already imports `cursive::CursiveExt`. If another Cursive API error appears, stop this task and update the plan from that concrete compiler evidence; do not make speculative shortcut, layout, input-method, or rendering changes.
+Rerun `cargo check --all-features` and verify it exits successfully.
 
 - [ ] **Step 4: Verify the dependency and behavior gates**
 
@@ -416,7 +417,7 @@ Expected: terminal binary builds without vendored-code warnings.
 - [ ] **Step 5: Commit the upstream migration**
 
 ```powershell
-git add Cargo.toml Cargo.lock
+git add Cargo.toml Cargo.lock src/list.rs src/terminal.rs docs/superpowers/plans/2026-11-18-core-cursive-test-foundation.md
 git commit -m "Upgrade terminal UI to Cursive 0.21"
 ```
 

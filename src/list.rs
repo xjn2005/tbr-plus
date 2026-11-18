@@ -11,7 +11,7 @@ pub(crate) fn list_dialog<'a, F, I, T: Listable>(
     callback: F,
 ) -> OnEventView<Dialog>
 where
-    F: Fn(&mut Cursive, usize) + 'static,
+    F: Fn(&mut Cursive, usize) + Send + Sync + 'static,
     I: Iterator<Item = T>,
 {
     let mut select_view = SelectView::new().on_submit(move |s, v| {
