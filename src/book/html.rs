@@ -6,7 +6,9 @@ use std::io::Read;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use crate::book::{Book, ImageData, Line, Loader, LoadingChapter};
+#[cfg(feature = "gui")]
+use crate::book::ImageData;
+use crate::book::{Book, Line, Loader, LoadingChapter};
 use crate::common::{TraceInfo, plain_text};
 use crate::config::{BookLoadingInfo, ReadingInfo};
 #[cfg(feature = "gui")]
@@ -22,8 +24,10 @@ pub(crate) struct HtmlLoader {
 }
 
 pub(crate) struct HtmlBook {
+    #[cfg(feature = "gui")]
     path: Option<PathBuf>,
     content: HtmlContent,
+    #[cfg(feature = "gui")]
     font_families: IndexSet<String>,
     #[cfg(feature = "gui")]
     fonts: HtmlFonts,
@@ -119,11 +123,7 @@ impl Loader for HtmlLoader {
             }
         };
         #[cfg(not(feature = "gui"))]
-        let book = HtmlBook {
-            path: Some(cwd.to_owned()),
-            content,
-            font_families,
-        };
+        let book = HtmlBook { content };
         Ok((Box::new(book), reading))
     }
 
@@ -139,8 +139,10 @@ impl Loader for HtmlLoader {
         let (content, _) =
             html_parser::parse(HtmlParseOptions::new(&text).with_font_family(&mut font_families))?;
         let book = HtmlBook {
+            #[cfg(feature = "gui")]
             path: None,
             content,
+            #[cfg(feature = "gui")]
             font_families,
             #[cfg(feature = "gui")]
             fonts: HtmlFonts::new(),
@@ -270,6 +272,7 @@ impl Book for HtmlBook {
         })
     }
 
+    #[cfg(feature = "gui")]
     fn image<'h>(&'h self, href: &'h str) -> Option<ImageData<'h>> {
         if let Some(path) = &self.path {
             let path = path.join(href);
@@ -280,6 +283,7 @@ impl Book for HtmlBook {
         }
     }
 
+    #[cfg(feature = "gui")]
     #[inline]
     fn font_family_names(&self) -> Option<&IndexSet<String>> {
         Some(&self.font_families)

@@ -1,7 +1,10 @@
-use anyhow::{Result, anyhow, bail};
+#[cfg(feature = "gui")]
+use anyhow::bail;
+use anyhow::{Result, anyhow};
 use fancy_regex::Regex;
 use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
+#[cfg(feature = "gui")]
 use std::ops::Range;
 
 use crate::book::{Book, Line};
@@ -69,7 +72,10 @@ pub enum HighlightMode {
     // link index for current line
     Link(usize),
     // selected text, line index for HighlightInfo.end
-    Selection(String, usize),
+    Selection(
+        String,
+        #[cfg_attr(not(feature = "gui"), allow(dead_code))] usize,
+    ),
 }
 
 pub struct HighlightInfo {
@@ -651,6 +657,7 @@ impl<C, R: Render<C> + ?Sized> Controller<C, R> {
         Ok(())
     }
 
+    #[cfg(feature = "gui")]
     pub fn goto(
         &mut self,
         inner_book: usize,

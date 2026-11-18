@@ -74,6 +74,7 @@ impl<'a> HtmlParseOptions<'a> {
     }
 }
 
+#[cfg_attr(not(feature = "gui"), allow(dead_code))]
 pub struct HtmlFontFaceDesc {
     pub sources: Vec<PathBuf>,
     pub family: String,
@@ -81,7 +82,7 @@ pub struct HtmlFontFaceDesc {
 
 #[derive(Clone, Debug)]
 pub enum FontWeightValue {
-    Absolute(FontWeight),
+    Absolute(#[cfg_attr(not(feature = "gui"), allow(dead_code))] FontWeight),
     Bolder,
     Lighter,
 }
@@ -150,6 +151,7 @@ bitflags! {
     }
 }
 
+#[cfg_attr(not(feature = "gui"), allow(dead_code))]
 pub enum BlockStyle {
     Border {
         range: Range<usize>,
@@ -163,6 +165,7 @@ pub enum BlockStyle {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(not(feature = "gui"), allow(dead_code))]
 pub struct TextDecoration {
     pub line: TextDecorationLine,
     pub style: TextDecorationStyle,
@@ -180,6 +183,7 @@ impl TextDecoration {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(not(feature = "gui"), allow(dead_code))]
 pub struct ElementSize {
     /// root font size based
     scale: FontScale,
@@ -191,14 +195,17 @@ impl ElementSize {
     fn new(scale: FontScale, relative: bool) -> Self {
         Self { scale, relative }
     }
+    #[cfg(feature = "gui")]
     #[inline]
     pub fn scale(&self) -> &FontScale {
         &self.scale
     }
+    #[cfg(feature = "gui")]
     #[inline]
     pub fn relative(&self) -> bool {
         self.relative
     }
+    #[cfg(feature = "gui")]
     #[inline]
     pub fn to_px(&self, font_scale: &FontScale, font_size: f32) -> f32 {
         let scale = if self.relative {
@@ -211,12 +218,14 @@ impl ElementSize {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(not(feature = "gui"), allow(dead_code))]
 pub enum ImageLength {
     ElementSize(ElementSize),
     Percent(f32),
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(not(feature = "gui"), allow(dead_code))]
 pub struct ImageStyle {
     pub href: String,
     pub width: Option<ImageLength>,
@@ -231,6 +240,7 @@ impl ImageStyle {
             height,
         }
     }
+    #[cfg(feature = "gui")]
     #[inline]
     pub fn href(&self) -> &str {
         &self.href
@@ -238,6 +248,7 @@ impl ImageStyle {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(not(feature = "gui"), allow(dead_code))]
 pub enum TextStyle {
     Decoration(TextDecoration),
     Border(BorderLines, Option<Color32>),
@@ -311,7 +322,7 @@ struct LeveledParseTag(ParseTag, bool);
 type LeveledParseTagSet = Vec<LeveledParseTag>;
 
 #[derive(Clone, Debug)]
-pub struct FontScale(f32);
+pub struct FontScale(#[cfg_attr(not(feature = "gui"), allow(dead_code))] f32);
 
 impl Default for FontScale {
     #[inline]
@@ -343,7 +354,7 @@ impl FontScale {
 }
 
 #[derive(Clone, Debug)]
-pub struct FontWeight(u16);
+pub struct FontWeight(#[cfg_attr(not(feature = "gui"), allow(dead_code))] u16);
 
 impl Default for FontWeight {
     #[inline]

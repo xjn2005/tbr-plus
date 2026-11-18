@@ -14,7 +14,9 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use zip::ZipArchive;
 
-use crate::book::{Book, ChapterError, ImageData, Line, Loader, LoadingChapter, TocInfo};
+#[cfg(feature = "gui")]
+use crate::book::ImageData;
+use crate::book::{Book, ChapterError, Line, Loader, LoadingChapter, TocInfo};
 use crate::common::TraceInfo;
 use crate::config::{BookLoadingInfo, ReadingInfo};
 #[cfg(feature = "gui")]
@@ -171,6 +173,7 @@ struct EpubBook {
     toc: Vec<NavPoint>,
     chapter_cache: HashMap<usize, Chapter>,
     css_cache: FrozenMap<String, String>,
+    #[cfg(feature = "gui")]
     images: FrozenMap<String, Vec<u8>>,
     font_families: IndexSet<String>,
     chapter_index: usize,
@@ -379,6 +382,7 @@ impl Book for EpubBook {
         }
     }
 
+    #[cfg(feature = "gui")]
     fn image<'h>(&'h self, href: &'h str) -> Option<ImageData<'h>> {
         match chapter_path(self.current_chapter(), &self.content_opf) {
             Ok(path) => {
@@ -393,6 +397,7 @@ impl Book for EpubBook {
         }
     }
 
+    #[cfg(feature = "gui")]
     #[inline]
     fn font_family_names(&self) -> Option<&IndexSet<String>> {
         Some(&self.font_families)
@@ -698,6 +703,7 @@ impl EpubBook {
             chapter_cache,
             chapter_index,
             css_cache: Default::default(),
+            #[cfg(feature = "gui")]
             images: Default::default(),
             font_families: Default::default(),
             #[cfg(feature = "gui")]

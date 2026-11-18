@@ -199,6 +199,7 @@ pub fn linear_f32_from_linear_u8(a: u8) -> f32 {
     a as f32 / 255.0
 }
 
+#[cfg(feature = "gui")]
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct Colors {
     pub color: Color32,
@@ -210,6 +211,7 @@ pub struct Colors {
     pub matched_background: Color32,
 }
 
+#[cfg(feature = "gui")]
 impl Colors {
     /// The palette shipped before tbr++ adopted its neutral, Notion-inspired
     /// dark theme.  It is retained only to migrate untouched user settings.

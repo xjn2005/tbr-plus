@@ -137,6 +137,7 @@ pub(crate) fn txt_lines(txt: &str) -> Vec<Line> {
     lines
 }
 
+#[cfg(feature = "gui")]
 pub(crate) fn byte_index_for_char(text: &str, chars: usize, char_index: usize) -> Option<usize> {
     if char_index == 0 {
         return Some(0);
@@ -199,6 +200,7 @@ macro_rules! frozen_map_get {
     }};
 }
 
+#[cfg(any(feature = "gui", test))]
 pub fn overlap_range(a: &Range<usize>, b: &Range<usize>) -> Option<Range<usize>> {
     use std::cmp;
 

@@ -11,6 +11,7 @@ use crate::container::ContainerManager;
 #[cfg(feature = "i18n")]
 use crate::i18n::I18n;
 
+#[cfg(any(feature = "gui", test))]
 mod annotations;
 mod book;
 mod color;
@@ -23,6 +24,7 @@ mod gui;
 mod html_parser;
 #[cfg(feature = "i18n")]
 mod i18n;
+#[cfg(any(feature = "gui", test))]
 mod library;
 mod list;
 #[cfg(feature = "open")]

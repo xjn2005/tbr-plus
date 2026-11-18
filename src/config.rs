@@ -9,6 +9,7 @@ use gtk4::Orientation;
 use rusqlite::{Connection, Row};
 use serde_derive::{Deserialize, Serialize};
 
+#[cfg(feature = "gui")]
 use crate::color::Colors;
 #[cfg(feature = "i18n")]
 use crate::i18n;
@@ -189,6 +190,7 @@ impl<'a> BookLoadingInfo<'a> {
     }
 }
 
+#[cfg(feature = "gui")]
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct PathConfig {
     pub enabled: bool,
@@ -494,12 +496,14 @@ where row_id = ?
     }
 }
 
+#[cfg(feature = "gui")]
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct Themes {
     bright: Colors,
     dark: Colors,
 }
 
+#[cfg(feature = "gui")]
 impl Default for Themes {
     fn default() -> Self {
         Self {
@@ -509,6 +513,7 @@ impl Default for Themes {
     }
 }
 
+#[cfg(feature = "gui")]
 impl Themes {
     /// Preserve intentional colour customisation while updating configurations
     /// that still contain the exact palettes shipped by the original reader.

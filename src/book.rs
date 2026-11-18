@@ -1,3 +1,4 @@
+#[cfg(feature = "gui")]
 use std::borrow::Cow;
 use std::cmp;
 use std::error::Error;
@@ -9,6 +10,7 @@ use std::slice::Iter;
 
 use anyhow::{Result, anyhow};
 use fancy_regex::Regex;
+#[cfg(feature = "gui")]
 use indexmap::IndexSet;
 
 use crate::book::epub::EpubLoader;
@@ -18,7 +20,9 @@ use crate::book::txt::TxtLoader;
 #[cfg(feature = "gui")]
 use crate::color::{Color32, Colors};
 use crate::common::TraceInfo;
-use crate::common::{Position, byte_index_for_char, char_index_for_byte};
+#[cfg(feature = "gui")]
+use crate::common::byte_index_for_char;
+use crate::common::{Position, char_index_for_byte};
 use crate::config::{BookLoadingInfo, ReadingInfo};
 use crate::container::BookContent;
 use crate::container::BookContent::{Buf, File, Path};
@@ -48,6 +52,7 @@ pub const TEXT_SELECTION_SPLITTER: [char; 92] = [
     '［', '］', '｀', '｛', '｜', '｝', '～',
 ];
 
+#[cfg(feature = "gui")]
 pub enum ImageData<'a> {
     Borrowed((Cow<'a, str>, &'a [u8])),
     Owned((String, Vec<u8>)),
@@ -97,11 +102,13 @@ pub struct Line {
     styles: Vec<(TextStyle, Range<usize>)>,
 }
 
+#[cfg(feature = "gui")]
 pub enum SearchError {
     Canceled,
     Custom(Cow<'static, str>),
 }
 
+#[cfg(feature = "gui")]
 impl Display for SearchError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -227,6 +234,7 @@ impl Line {
     }
 
     /// F: (text: &str, found_range: Range<usize>)
+    #[cfg(feature = "gui")]
     pub fn search_pattern<F>(&self, regex: &Regex, f: F) -> Result<(), SearchError>
     where
         F: Fn(&str, Range<usize>) -> Result<(), SearchError>,
@@ -451,6 +459,7 @@ pub enum LoadingChapter {
 pub struct TocInfo<'a> {
     pub title: &'a str,
     pub index: usize,
+    #[cfg_attr(not(feature = "gui"), allow(dead_code))]
     pub level: usize,
 }
 
@@ -525,10 +534,12 @@ pub trait Book {
         None
     }
     // (absolute path, content)
+    #[cfg(feature = "gui")]
     #[inline]
     fn image<'a>(&'a self, _href: &'a str) -> Option<ImageData<'a>> {
         None
     }
+    #[cfg(feature = "gui")]
     #[inline]
     fn font_family_names(&self) -> Option<&IndexSet<String>> {
         None
